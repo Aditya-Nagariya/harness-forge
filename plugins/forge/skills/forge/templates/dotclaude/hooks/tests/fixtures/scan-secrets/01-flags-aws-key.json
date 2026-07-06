@@ -1,0 +1,6 @@
+{
+  "name": "flags an AWS access key with ask, not deny",
+  "stdin": { "tool_input": { "content": "let k = \"AKIAABCDEFGHIJKLMNOP\";" } },
+  "expect_exit": 2,
+  "expect_stdout_contains": ["ask", "AWS"]
+}

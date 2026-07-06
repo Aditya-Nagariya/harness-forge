@@ -1,0 +1,6 @@
+{
+  "name": "blocks editing .claude/hooks/* (self-protecting)",
+  "stdin": { "tool_input": { "file_path": "/repo/.claude/hooks/stop.sh", "content": "junk" } },
+  "expect_exit": 2,
+  "expect_stdout_contains": ["deny", "hook scripts"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "blocks rm -rf unresolved variable",
+  "stdin": {
+    "tool_input": {
+      "command": "rm -rf $TRASH"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "rm -rf"
+  ]
+}

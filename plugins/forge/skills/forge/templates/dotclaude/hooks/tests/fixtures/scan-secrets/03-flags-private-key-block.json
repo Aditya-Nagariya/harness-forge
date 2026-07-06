@@ -1,0 +1,6 @@
+{
+  "name": "flags a PRIVATE KEY block",
+  "stdin": { "tool_input": { "content": "-----BEGIN RSA PRIVATE KEY-----\nMIIB...\n-----END RSA PRIVATE KEY-----" } },
+  "expect_exit": 2,
+  "expect_stdout_contains": ["ask", "PRIVATE KEY"]
+}

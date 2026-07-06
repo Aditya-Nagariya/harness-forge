@@ -1,0 +1,3 @@
+# Files to copy into every new git worktree (gitignore syntax; only files that are
+# BOTH gitignored AND matched here get copied).
+CLAUDE.local.md

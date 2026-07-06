@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://harness-forge.local/schema/status.schema.json",
+  "title": "project live status",
+  "type": "object",
+  "required": ["schemaVersion", "health", "tasks"],
+  "properties": {
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "health": {
+      "type": "object",
+      "description": "Project-wide, hook-maintained. Written by .claude/hooks/post-tool-use.sh — do not hand-edit.",
+      "required": ["build", "clippy", "fmt", "tests", "last_checked"],
+      "properties": {
+        "build": { "enum": ["pass", "fail", "unknown"] },
+        "clippy": { "enum": ["pass", "fail", "unknown"] },
+        "fmt": { "enum": ["pass", "fail", "unknown"] },
+        "tests": { "enum": ["pass", "fail", "unknown"] },
+        "last_checked": { "type": "string", "format": "date-time" }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Machine-readable mirror of .claude/tasks/TASKS.md. Human edits TASKS.md; this array is regenerated from it, not hand-authored independently.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^#\\d{3}$" },
+          "title": { "type": "string" },
+          "status": {
+            "enum": ["pending", "running", "needs-fix", "broken", "upgrading", "completed"]
+          },
+          "fr_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

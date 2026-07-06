@@ -1,0 +1,16 @@
+{
+  "name": "blocks rm -rf on a protected dir",
+  "stdin": {
+    "tool_input": {
+      "command": "rm -rf src/core"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "protected"
+  ]
+}

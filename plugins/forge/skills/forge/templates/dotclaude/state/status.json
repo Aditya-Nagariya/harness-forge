@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "health": {
+    "build": "unknown",
+    "lint": "unknown",
+    "fmt": "unknown",
+    "tests": "unknown",
+    "last_checked": "unknown"
+  },
+  "tasks": []
+}

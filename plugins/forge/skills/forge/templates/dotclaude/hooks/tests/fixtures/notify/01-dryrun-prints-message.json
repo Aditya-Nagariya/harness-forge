@@ -1,0 +1,7 @@
+{
+  "name": "dry-run mode prints instead of firing a real notification",
+  "stdin": { "message": "test notification" },
+  "env": { "HARNESS_NOTIFY_DRYRUN": "1" },
+  "expect_exit": 0,
+  "expect_stdout_contains": ["DRYRUN notify", "test notification"]
+}

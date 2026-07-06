@@ -1,0 +1,19 @@
+# Local notes (gitignored — personal scratch, not shared)
+
+## Environment
+
+- (machine-specific paths, package-manager quirks, local service ports)
+
+## Paste-ready commands
+
+```
+# (your most-used commands — the harness reads the canonical ones from .claude/harness.env)
+```
+
+## Shortcuts
+
+- (personal phrasing → skill mappings, e.g. "ship it" → /ship)
+
+## Stop signs (never auto-run)
+
+- (commands you personally never want run without asking — migrations, deploys, .env edits)

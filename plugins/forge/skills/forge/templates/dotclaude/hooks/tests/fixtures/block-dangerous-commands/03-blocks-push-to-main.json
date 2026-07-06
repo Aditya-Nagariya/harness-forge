@@ -1,0 +1,16 @@
+{
+  "name": "blocks push directly to main",
+  "stdin": {
+    "tool_input": {
+      "command": "git push origin main"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "protected branch"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "blocks force push",
+  "stdin": {
+    "tool_input": {
+      "command": "git push --force origin main"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "Force push"
+  ]
+}

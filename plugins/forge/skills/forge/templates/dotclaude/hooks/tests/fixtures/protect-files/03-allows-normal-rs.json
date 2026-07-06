@@ -1,0 +1,5 @@
+{
+  "name": "allows normal source file writes",
+  "stdin": { "tool_input": { "file_path": "src/lib/registry.ts", "content": "junk" } },
+  "expect_exit": 0
+}

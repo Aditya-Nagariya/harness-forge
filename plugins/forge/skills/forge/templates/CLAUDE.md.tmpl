@@ -1,0 +1,45 @@
+# {{PROJECT_NAME}}
+
+{{PROJECT_DESC}}
+
+## Commands
+
+- Build: `{{BUILD_CMD}}`
+- Test: `{{TEST_CMD}}`
+- Lint: `{{LINT_CMD}}`
+- Format: `{{FMT_CMD}}`
+
+(The harness hooks read these from `.claude/harness.env` — if the toolchain changes, update that file, not the hook scripts.)
+
+## Live state — read these, keep these current
+
+- `.claude/tasks/TASKS.md` — canonical task list, six statuses (`pending/running/needs-fix/broken/upgrading/completed`). Completed items move to `ARCHIVE.md` with a verification line.
+- `.claude/state/status.json` — hook-maintained build/lint/tests health. Never hand-edit its `health` block.
+- `.claude/GUIDE.md` — **the management system**: where every kind of file goes, who may write what, naming and lifecycle rules. Read it before creating any new file outside the source tree.
+
+## How this harness is organized
+
+- **Hooks** (`.claude/hooks/`) = deterministic enforcement, can hard-block. If a hook enforces something, there is no separate rule saying the same thing.
+- **Rules** (`.claude/rules/`) = advisory conventions, read on demand: `safety.md`, `ship-verification.md`, `git-workflow.md`.
+- **Skills** (`.claude/skills/`) = on-demand procedures: `/ship`, `/catchup`, `/learn`, `/harness-audit`.
+- **Agents** (`.claude/agents/`) = isolated-context workers: `Explore` (haiku-pinned search), `small-executor` (one narrow step, persistent memory, completion gate), `small-verifier` (single-aspect checklist). Agents can't see this file — their prompts restate the house rules; don't replace those restatements with references.
+- **Workflows** (`.claude/workflows/elevate.js`) = the small-model cascade: executor attempt → 3-aspect verifier panel → one evidence-injected retry → escalate to the session model.
+
+## Self-healing & continuous learning
+
+1. Every tool failure is recorded automatically (`capture-failure.sh` → `.claude/state/failure-ledger.jsonl`); signatures repeating ≥2× surface at session start.
+2. `/learn` converts repeated failures and user corrections into per-file lessons (`.claude/memory/lessons/`, top-3 injected each session). Lessons need verbatim evidence; updates are deltas, never wholesale rewrites.
+3. At weight ≥3.0, mechanically checkable lessons are promoted into hooks or `.claude/evals/regressions/` checks; judgment-only lessons get one line here.
+4. `/harness-audit` is the self-maintenance pass; bare `/loop` routes through finish-work → `/learn` → audit → next task (see `.claude/loop.md`).
+
+Evidence base for all of the above: `.claude/memory/research/` — read the relevant digest before removing or "simplifying" a mechanism.
+
+## House rules
+
+{{HOUSE_RULES_BULLETS}}
+
+## Don'ts
+
+- Don't mark a task `completed` without a verification statement (`.claude/rules/ship-verification.md`).
+- Don't hand-edit lockfiles, `.claude/state/status.json`'s health block, or `.claude/hooks/*` (hook-blocked).
+- Don't add an always-loaded rule when a hook or a path-scoped rule would do — every always-loaded line taxes every turn.

@@ -1,0 +1,13 @@
+{
+  "name": "allows rm -rf on a build dir",
+  "stdin": {
+    "tool_input": {
+      "command": "rm -rf dist/output"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 0
+}

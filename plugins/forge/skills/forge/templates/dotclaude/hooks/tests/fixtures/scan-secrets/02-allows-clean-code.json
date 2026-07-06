@@ -1,0 +1,5 @@
+{
+  "name": "allows ordinary Rust source with no secret-shaped strings",
+  "stdin": { "tool_input": { "content": "fn main() { println!(\"hi\"); }" } },
+  "expect_exit": 0
+}

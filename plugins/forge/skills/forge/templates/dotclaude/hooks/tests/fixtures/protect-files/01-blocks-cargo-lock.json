@@ -1,0 +1,17 @@
+{
+  "name": "blocks hand-editing Cargo.lock",
+  "stdin": {
+    "tool_input": {
+      "file_path": "/repo/Cargo.lock",
+      "content": "junk"
+    }
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "deny",
+    "Cargo.lock"
+  ],
+  "env": {
+    "LOCKFILES": "Cargo.lock package-lock.json"
+  }
+}

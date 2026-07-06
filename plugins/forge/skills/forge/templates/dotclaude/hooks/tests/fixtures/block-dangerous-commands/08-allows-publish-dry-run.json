@@ -1,0 +1,13 @@
+{
+  "name": "allows npm publish --dry-run",
+  "stdin": {
+    "tool_input": {
+      "command": "npm publish --dry-run"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 0
+}

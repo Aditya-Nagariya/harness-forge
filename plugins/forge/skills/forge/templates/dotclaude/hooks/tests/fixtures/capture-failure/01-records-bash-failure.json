@@ -1,0 +1,7 @@
+{
+  "name": "records a Bash tool failure with a normalized signature (dry-run)",
+  "stdin": { "hook_event_name": "PostToolUseFailure", "tool_name": "Bash", "tool_input": { "command": "run tests" }, "tool_error": "error[E0308]: mismatched types at /Users/x/project/src/registry.rs:42" },
+  "env": { "HARNESS_FAILURE_DRYRUN": "1" },
+  "expect_exit": 0,
+  "expect_stdout_contains": ["DRYRUN ledger", "\"tool\": \"Bash\"", "<path>", "signature"]
+}

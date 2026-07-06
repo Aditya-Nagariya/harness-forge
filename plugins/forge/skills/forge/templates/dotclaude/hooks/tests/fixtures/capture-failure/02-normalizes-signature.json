@@ -1,0 +1,7 @@
+{
+  "name": "same failure class with different paths/numbers produces the same signature fields",
+  "stdin": { "hook_event_name": "PostToolUseFailure", "tool_name": "Bash", "tool_input": { "command": "run build" }, "tool_error": "error[E0308]: mismatched types at /other/machine/project/src/registry.rs:97" },
+  "env": { "HARNESS_FAILURE_DRYRUN": "1" },
+  "expect_exit": 0,
+  "expect_stdout_contains": ["error[e<n>]: mismatched types at <path>"]
+}

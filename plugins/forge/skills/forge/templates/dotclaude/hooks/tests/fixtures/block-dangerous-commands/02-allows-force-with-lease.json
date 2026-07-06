@@ -1,0 +1,13 @@
+{
+  "name": "allows --force-with-lease on feature",
+  "stdin": {
+    "tool_input": {
+      "command": "git push --force-with-lease origin feature-x"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 0
+}

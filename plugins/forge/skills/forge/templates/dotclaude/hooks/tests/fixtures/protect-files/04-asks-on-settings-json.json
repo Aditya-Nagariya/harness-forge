@@ -1,0 +1,6 @@
+{
+  "name": "warns (not blocks) on settings.json edits",
+  "stdin": { "tool_input": { "file_path": "/repo/.claude/settings.json", "content": "junk" } },
+  "expect_exit": 0,
+  "expect_stdout_contains": ["additionalContext", "settings.json"]
+}

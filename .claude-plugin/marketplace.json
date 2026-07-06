@@ -1,0 +1,23 @@
+{
+  "name": "harness-forge",
+  "owner": {
+    "name": "Aditya Nagariya"
+  },
+  "plugins": [
+    {
+      "name": "forge",
+      "source": "./plugins/forge",
+      "description": "Create and upgrade a self-improving Claude Code harness (self-healing failure ledger, per-file lesson memory, regression evals, small-model elevation, safety hooks) in any project with one slash command.",
+      "category": "workflow",
+      "keywords": [
+        "harness",
+        "scaffolding",
+        "self-improving",
+        "memory",
+        "hooks",
+        "setup"
+      ]
+    }
+  ],
+  "description": "Self-improving Claude Code harnesses: one command installs self-healing failure capture, lesson memory with promotion lifecycle, regression evals, small-model elevation agents, and fixture-tested safety hooks into any project."
+}
