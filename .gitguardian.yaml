@@ -1,0 +1,8 @@
+# The scan-secrets hook is tested with deliberately-FAKE credential-shaped strings
+# (that's how we prove the hook detects real ones). They are never real or revoked
+# secrets — just alphabet/placeholder tokens. Allowlist the fixture tree so external
+# secret scanners don't false-positive on our own test suite.
+version: 2
+secret:
+  ignored_paths:
+    - "plugins/forge/skills/forge/templates/dotclaude/hooks/tests/fixtures/scan-secrets/**"
