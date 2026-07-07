@@ -102,6 +102,15 @@ The harness is versioned, tested software. A Zone B change requires all three:
 - **Injected at session start** (bounded): health summary, open-task count, top-3 lessons, failure hotspots — a fixed-size digest, never a growing file.
 - **Just-in-time** (on demand): full lessons, issues-solved entries, research digests, this guide — loaded when a trigger matches, not by default.
 - Instruction-following degrades as rule count grows, and small models degrade fastest — which is why mature rules migrate out of prose into hooks, and why this guide is a reference document rather than an always-loaded rulebook.
+- **Regulator:** `/context-budget` (script: `.claude/scripts/context-budget.sh`, gated in CI) measures the always-loaded total and fails over the cap. A self-improving harness accretes rules and lessons; without this it silently bloats. Run it whenever CLAUDE.md or the rules grow.
+
+## 6a. Checkpoint hygiene (keeping the codebase maintainable)
+
+When a milestone/feature completes and the tree is green — a **checkpoint** — prune before moving on, so cruft never compounds:
+
+- `/declutter` removes dead code, unused dependencies, commented-out blocks, and orphaned files. It is evidence-gated (nothing goes without tool-proof or grep-proof of zero references) and reversible (build+tests must stay green after every small batch; a red result reverts that batch). It runs at checkpoints only — mid-feature, "unused" often means "not wired up yet."
+- Guard zone (never removed without explicit confirmation): public/exported API, `cfg`/feature-flag-gated code (check *all* configs), test fixtures, doc/CI-referenced items.
+- This is the maintainability counterpart to the lesson store's grow-and-refine: the harness accumulates knowledge *and* sheds dead weight, so both the context and the codebase stay lean over time.
 
 ## 7. Operating protocol for small models
 
