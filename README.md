@@ -17,19 +17,32 @@ All design choices are evidence-backed; the research digests (with citations) sh
 
 ## Install
 
-**As a plugin** (recommended):
+Inside Claude Code, run:
 
 ```
-/plugin marketplace add <path-or-git-url-of-this-repo>
+/plugin marketplace add Aditya-Nagariya/harness-forge
 /plugin install forge@harness-forge
 ```
 
-Then in any project: `/forge:forge` (or just `/forge` if you copy `plugins/forge/skills/forge/` into `~/.claude/skills/`).
+Then, in any project of yours, run `/forge` — it scans the stack, proposes a plan, installs the harness, and verifies it.
+
+**Prerequisites:** `python3` (always used by the hooks) and `jq` (only for the hook test suite). Hooks fail open if `python3` is missing, so nothing breaks, but the self-healing and live-status features need it.
 
 ## Use
 
 - `/forge` — auto-detects: fresh install (scan → plan table → confirm → apply → verify) or upgrade.
 - `/forge doctor` — validate the installed harness; report `.forge-new` merge conflicts; fix mechanical issues.
+
+## Updating
+
+When a new version ships, pull it with:
+
+```
+/plugin marketplace update harness-forge
+/plugin update forge
+```
+
+Then run `/forge` in a project to upgrade its installed harness in place — pristine files update automatically, your edits are preserved as `<file>.forge-new`, and your data (lessons, memory, tasks, issues, `harness.env`, `CLAUDE.md`) is never touched.
 
 **Upgrade safety:** `bootstrap.sh` records a sha256 manifest of every installed harness file. On upgrade, pristine files update automatically; files you've modified are never clobbered — the new version arrives as `<file>.forge-new`. Your data (lessons, memory, tasks, issues, `harness.env`, `CLAUDE.md`) is never touched by an upgrade, ever.
 
