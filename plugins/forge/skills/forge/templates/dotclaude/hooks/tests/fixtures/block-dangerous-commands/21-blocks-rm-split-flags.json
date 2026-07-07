@@ -1,0 +1,16 @@
+{
+  "name": "21-blocks-rm-split-flags",
+  "stdin": {
+    "tool_input": {
+      "command": "rm -r -f /"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "root"
+  ]
+}

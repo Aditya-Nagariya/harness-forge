@@ -35,8 +35,8 @@ fi
 running=0
 needsfix_broken=0
 if [ -f "$TASKS_FILE" ]; then
-  running=$(grep -c '^Status: running' "$TASKS_FILE" 2>/dev/null || echo 0)
-  needsfix_broken=$(grep -cE '^Status: (needs-fix|broken)' "$TASKS_FILE" 2>/dev/null || echo 0)
+  running=$(grep -c '^Status: running' "$TASKS_FILE" 2>/dev/null) || running=0
+  needsfix_broken=$(grep -cE '^Status: (needs-fix|broken)' "$TASKS_FILE" 2>/dev/null) || needsfix_broken=0
 fi
 
 printf '[%s] %s%s | build:%s tests:%s | %s running, %s broken/needs-fix\n' \

@@ -1,0 +1,16 @@
+{
+  "name": "23-blocks-git-c-force",
+  "stdin": {
+    "tool_input": {
+      "command": "git -c protocol.version=2 push --force origin main"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "Force push"
+  ]
+}

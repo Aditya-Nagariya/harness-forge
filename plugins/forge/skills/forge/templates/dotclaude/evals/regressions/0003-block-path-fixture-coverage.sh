@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression check derived from lesson 0005's rule: every deterministic PreToolUse
+# Regression check derived from lesson 0001's rule: every deterministic PreToolUse
 # gate hook must have at least one fixture that expects exit 2 (the block path).
 # A gate whose block path is untested has "silently allow" as its failure mode.
 set -uo pipefail

@@ -2,7 +2,7 @@
 # SessionStart hook: inject current health, open tasks, git state, config drift,
 # top lessons, and repeated-failure hotspots as additional context — every session
 # starts knowing the project's live state and its own past mistakes.
-set -euo pipefail
+set -uo pipefail  # not -e: a failed sub-block must not drop all session context
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -30,7 +30,7 @@ fi
 
 open_tasks="?"
 if [ -f "$TASKS_FILE" ]; then
-  open_tasks="$(grep -cE '^Status: (pending|running|needs-fix|broken|upgrading)' "$TASKS_FILE" 2>/dev/null || echo 0)"
+  open_tasks="$(grep -cE '^Status: (pending|running|needs-fix|broken|upgrading)' "$TASKS_FILE" 2>/dev/null)" || open_tasks=0
 fi
 
 git_summary="$(git status --short 2>/dev/null | head -10 || echo "(not a git repo or no changes)")"

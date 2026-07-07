@@ -1,0 +1,16 @@
+{
+  "name": "22-blocks-rm-fr-protected",
+  "stdin": {
+    "tool_input": {
+      "command": "rm -fr src"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "protected"
+  ]
+}

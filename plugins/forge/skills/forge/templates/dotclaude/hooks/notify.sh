@@ -21,8 +21,11 @@ if [[ "${HARNESS_NOTIFY_DRYRUN:-0}" == "1" ]]; then
   exit 0
 fi
 
+# Pass the message via argv, NEVER interpolated into the -e script string, or a
+# message containing a double-quote breaks out into arbitrary AppleScript.
 if command -v osascript >/dev/null 2>&1; then
-  osascript -e "display notification \"$MESSAGE\" with title \"Claude Code\"" >/dev/null 2>&1 || true
+  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title (item 2 of argv)' -e 'end run' \
+    "$MESSAGE" "Claude Code" >/dev/null 2>&1 || true
 elif command -v notify-send >/dev/null 2>&1; then
   notify-send "Claude Code" "$MESSAGE" >/dev/null 2>&1 || true
 fi

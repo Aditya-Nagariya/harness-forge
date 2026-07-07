@@ -2,6 +2,10 @@
 # PreToolUse (Bash) hook: block genuinely dangerous shell commands.
 # Stack-agnostic core; protected dirs/branches come from .claude/harness.env.
 # Fails open if the command can't be parsed (content-scanning hook).
+#
+# Detection is done in a single Python pass (shlex tokenizer) so it is robust to
+# flag order (rm -fr), split flags (rm -r -f), command prefixes (git -c ... push,
+# /bin/rm), and && / ; / | chaining — regex-per-line approaches leaked all of these.
 set -uo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -19,70 +23,171 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 0
 fi
 
-COMMAND="$(python3 -c "
-import json, sys
-d = json.loads(sys.argv[1])
-print(d.get('tool_input', {}).get('command', '') or '')
-" "$INPUT" 2>/dev/null || echo "")"
+REASON="$(python3 - "$INPUT" "$PROTECTED_DIRS" "$PROTECTED_BRANCHES" <<'PY'
+import json, os, shlex, sys, re
 
-if [[ -z "$COMMAND" ]]; then
-  exit 0
-fi
+try:
+    data = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(0)
+command = (data.get("tool_input", {}) or {}).get("command", "") or ""
+if not command.strip():
+    sys.exit(0)
 
-deny() {
+protected_dirs = [d for d in sys.argv[2].split() if d]
+protected_branches = [b for b in sys.argv[3].split(",") if b]
+
+# Split a command line into simple commands across ; && || | and newlines.
+def split_simple(cmd):
+    parts, buf, i = [], [], 0
+    seps = {";", "\n"}
+    while i < len(cmd):
+        two = cmd[i:i+2]
+        if two in ("&&", "||"):
+            parts.append("".join(buf)); buf = []; i += 2; continue
+        c = cmd[i]
+        if c in ("|",) or c in seps:
+            parts.append("".join(buf)); buf = []; i += 1; continue
+        buf.append(c); i += 1
+    parts.append("".join(buf))
+    return [p.strip() for p in parts if p.strip()]
+
+def tokenize(s):
+    try:
+        return shlex.split(s)
+    except ValueError:
+        # Unbalanced quotes etc. — fall back to a naive split so we still inspect.
+        return s.replace('"', " ").replace("'", " ").split()
+
+def basename(tok):
+    return tok.rsplit("/", 1)[-1]
+
+def flag_letters(tokens):
+    """Union of single-letter flags from -xyz style tokens (not -- long opts)."""
+    letters = set()
+    for t in tokens:
+        if t.startswith("-") and not t.startswith("--"):
+            letters.update(ch for ch in t[1:] if ch.isalpha())
+    return letters
+
+def reason_for(simple):
+    toks = tokenize(simple)
+    if not toks:
+        return None
+    argv0 = basename(toks[0])
+
+    # env-assignment prefix (FOO=1 cmd ...) and `env`/`sudo`/`command`/`nice`/`time` wrappers
+    idx = 0
+    while idx < len(toks):
+        t = toks[idx]
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t):
+            idx += 1; continue
+        if basename(t) in ("env", "sudo", "command", "nice", "time", "nohup", "xargs"):
+            idx += 1
+            # skip options to the wrapper
+            while idx < len(toks) and toks[idx].startswith("-"):
+                idx += 1
+            continue
+        break
+    if idx >= len(toks):
+        return None
+    toks = toks[idx:]
+    argv0 = basename(toks[0])
+    rest = toks[1:]
+
+    # --- rm: recursive AND force, order/split independent ---
+    if argv0 == "rm":
+        letters = flag_letters(rest)
+        recursive = "r" in letters or "R" in letters
+        force = "f" in letters
+        if recursive and force:
+            args = [t for t in rest if not t.startswith("-")]
+            # root / home / unresolved var / parent traversal
+            for a in args:
+                if a == "/" or a.startswith("/ ") or a in ("~",) or a.startswith("~/") \
+                   or a == "$HOME" or re.match(r"^\$[A-Za-z_][A-Za-z0-9_]*$", a) \
+                   or a.startswith("$HOME") or "../.." in a:
+                    return "rm -rf against root, home, or an unresolved variable/parent-traversal path is blocked as too risky to auto-approve."
+                if a.rstrip("/") == "" and a:
+                    return "rm -rf against a root-like path is blocked."
+            # protected project dirs
+            prot = list(protected_dirs) + [".git"]
+            for a in args:
+                head = a.lstrip("./").rstrip("/")
+                first = head.split("/", 1)[0]
+                if first in prot or head in prot:
+                    return "rm -rf targeting a protected directory (%s, .git) is blocked. See .claude/rules/safety.md." % ", ".join(protected_dirs)
+        return None
+
+    # --- git: skip global options to find the subcommand ---
+    if argv0 == "git":
+        j = 0
+        sub = None
+        while j < len(rest):
+            t = rest[j]
+            if t in ("-C", "-c", "--namespace", "--git-dir", "--work-tree", "--exec-path"):
+                j += 2; continue
+            if t.startswith("-"):
+                j += 1; continue
+            sub = t; subargs = rest[j+1:]; break
+        else:
+            return None
+        if sub == "push":
+            has_force = any(a == "--force" or a == "-f" or
+                            (a.startswith("-") and not a.startswith("--") and "f" in a[1:])
+                            for a in subargs)
+            lease = any(a.startswith("--force-with-lease") for a in subargs)
+            if has_force and not lease:
+                return "Force push is blocked (use --force-with-lease if you truly need it, and confirm with the user first)."
+            for a in subargs:
+                ref = a.split(":")[-1]
+                if ref in protected_branches:
+                    return "Push targets a protected branch (%s). Confirm with the user before pushing directly to it." % ",".join(protected_branches)
+        elif sub == "reset":
+            if "--hard" in subargs:
+                return "git reset --hard discards uncommitted work irreversibly. Confirm with the user first."
+        elif sub == "clean":
+            if any(a.startswith("-") and not a.startswith("--") and "f" in a[1:] for a in subargs) or "--force" in subargs:
+                return "git clean -f deletes untracked files irreversibly. Confirm with the user first."
+        return None
+
+    # --- chmod 777 / a+rwx ---
+    if argv0 == "chmod":
+        if any(a in ("777", "a+rwx") for a in rest):
+            return "chmod 777 / a+rwx is almost never intentional. Confirm with the user first."
+        return None
+
+    # --- package publish without a dry-run flag ---
+    publishers = {"npm", "yarn", "pnpm", "bun", "cargo", "gem", "twine"}
+    if argv0 in publishers:
+        verb = rest[0] if rest else ""
+        is_publish = (verb == "publish") or (argv0 == "gem" and verb == "push") or (argv0 == "twine" and verb == "upload")
+        if is_publish and "--dry-run" not in rest and "-n" not in rest:
+            return "Publishing to a package registry without --dry-run is blocked. Confirm with the user first; use --dry-run to test."
+        return None
+
+    return None
+
+# curl|wget piped into a shell is a property of the whole pipeline, checked on the raw command.
+if re.search(r"(^|[|;&\s])(curl|wget)\b", command) and \
+   re.search(r"\|\s*(sudo\s+)?(bash|sh|zsh|ksh|fish|dash)\b", command):
+    print("Piping curl/wget output directly into a shell is blocked — download, inspect, then run.")
+    sys.exit(0)
+
+for simple in split_simple(command):
+    r = reason_for(simple)
+    if r:
+        print(r)
+        sys.exit(0)
+sys.exit(0)
+PY
+)"
+
+if [[ -n "$REASON" ]]; then
   python3 -c "
 import json, sys
 print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny', 'permissionDecisionReason': sys.argv[1]}}))
-" "$1"
+" "$REASON"
   exit 2
-}
-
-BR_REGEX="$(printf '%s' "$PROTECTED_BRANCHES" | tr ',' '|')"
-
-# --- git: force push (allow --force-with-lease) ---
-if [[ "$COMMAND" =~ git[[:space:]]+push ]] && [[ "$COMMAND" =~ (-[a-zA-Z]*f[a-zA-Z]*|--force)([[:space:]=]|$) ]] && [[ "$COMMAND" != *"--force-with-lease"* ]]; then
-  deny "Force push is blocked (use --force-with-lease if you truly need it, and confirm with the user first)."
 fi
-
-# --- git: push directly to a protected branch ---
-if [[ "$COMMAND" =~ git[[:space:]]+push ]] && [[ "$COMMAND" =~ ($BR_REGEX)($|[[:space:]]) ]]; then
-  deny "Push targets a protected branch ($PROTECTED_BRANCHES). Confirm with the user before pushing directly to it."
-fi
-
-# --- git: reset --hard / clean -f ---
-if [[ "$COMMAND" =~ git[[:space:]]+reset[[:space:]]+--hard ]]; then
-  deny "git reset --hard discards uncommitted work irreversibly. Confirm with the user first."
-fi
-if [[ "$COMMAND" =~ git[[:space:]]+clean[[:space:]]+-[a-zA-Z]*f ]]; then
-  deny "git clean -f deletes untracked files irreversibly. Confirm with the user first."
-fi
-
-# --- rm -rf: strip quotes first so quoted/expanded paths are still caught ---
-STRIPPED="$(printf '%s' "$COMMAND" | tr -d "'\"")"
-RE_RM_ROOT_HOME='rm[[:space:]]+(-[a-zA-Z]*[[:space:]]+)*-?[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*[[:space:]]+(/([[:space:]]|\*|$)|~|\$HOME|\$[A-Za-z_][A-Za-z0-9_]*|\.\./\.\.)'
-if [[ "$STRIPPED" =~ $RE_RM_ROOT_HOME ]]; then
-  deny "rm -rf against root, home, or an unresolved variable/parent-traversal path is blocked as too risky to auto-approve."
-fi
-PROT_REGEX="$(printf '%s' "$PROTECTED_DIRS" | tr ' ' '|')"
-RE_RM_PROJECT="rm[[:space:]]+-[a-zA-Z]*rf[a-zA-Z]*[[:space:]].*($PROT_REGEX|\\.git)([[:space:]/]|\$)"
-if [[ "$STRIPPED" =~ $RE_RM_PROJECT ]]; then
-  deny "rm -rf targeting a protected directory ($PROTECTED_DIRS, .git) is blocked. See .claude/rules/safety.md."
-fi
-
-# --- chmod 777 / a+rwx ---
-if [[ "$COMMAND" =~ chmod[[:space:]]+(777|a\+rwx) ]]; then
-  deny "chmod 777 / a+rwx is almost never intentional. Confirm with the user first."
-fi
-
-# --- curl/wget piped to a shell ---
-if [[ "$COMMAND" =~ (curl|wget)[[:space:]].*\|[[:space:]]*(sudo[[:space:]]+)?(bash|sh|zsh|ksh|fish|dash) ]]; then
-  deny "Piping curl/wget output directly into a shell is blocked — download, inspect, then run."
-fi
-
-# --- package publish without a dry-run flag ---
-if [[ "$COMMAND" =~ (npm|yarn|pnpm|bun)[[:space:]]+publish|cargo[[:space:]]+publish|gem[[:space:]]+push|twine[[:space:]]+upload ]] \
-   && [[ "$COMMAND" != *"--dry-run"* && "$COMMAND" != *" -n "* ]]; then
-  deny "Publishing to a package registry without --dry-run is blocked. Confirm with the user first; use --dry-run to test."
-fi
-
 exit 0

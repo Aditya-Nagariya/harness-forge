@@ -1,0 +1,13 @@
+{
+  "name": "26-allows-echo-of-danger",
+  "stdin": {
+    "tool_input": {
+      "command": "echo rm -rf / is scary"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 0
+}

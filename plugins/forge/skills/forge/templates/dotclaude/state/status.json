@@ -3,7 +3,6 @@
   "health": {
     "build": "unknown",
     "lint": "unknown",
-    "fmt": "unknown",
     "tests": "unknown",
     "last_checked": "unknown"
   },

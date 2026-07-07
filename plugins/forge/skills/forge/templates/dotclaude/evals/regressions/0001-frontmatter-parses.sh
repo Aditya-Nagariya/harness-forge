@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression check for issues-solved 0001 / lesson 0003: every agent/skill YAML
+# Regression check for lesson 0002: every agent/skill YAML
 # frontmatter must parse with name+description as strings. The original failure
 # was silent (broken YAML -> agent de-registered with no error until spawn time).
 set -uo pipefail

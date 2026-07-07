@@ -8,14 +8,13 @@
     "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "health": {
       "type": "object",
-      "description": "Project-wide, hook-maintained. Written by .claude/hooks/post-tool-use.sh — do not hand-edit.",
-      "required": ["build", "clippy", "fmt", "tests", "last_checked"],
+      "description": "Project-wide, hook-maintained. `build`/`lint` written by .claude/hooks/update-status.sh, `tests` by auto-test.sh — do not hand-edit.",
+      "required": ["build", "lint", "tests", "last_checked"],
       "properties": {
         "build": { "enum": ["pass", "fail", "unknown"] },
-        "clippy": { "enum": ["pass", "fail", "unknown"] },
-        "fmt": { "enum": ["pass", "fail", "unknown"] },
+        "lint": { "enum": ["pass", "fail", "unknown"] },
         "tests": { "enum": ["pass", "fail", "unknown"] },
-        "last_checked": { "type": "string", "format": "date-time" }
+        "last_checked": { "type": "string" }
       }
     },
     "tasks": {
@@ -29,8 +28,7 @@
           "title": { "type": "string" },
           "status": {
             "enum": ["pending", "running", "needs-fix", "broken", "upgrading", "completed"]
-          },
-          "fr_refs": { "type": "array", "items": { "type": "string" } }
+          }
         }
       }
     }

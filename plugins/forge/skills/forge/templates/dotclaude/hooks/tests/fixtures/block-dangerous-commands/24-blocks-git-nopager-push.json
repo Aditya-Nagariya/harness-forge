@@ -1,0 +1,16 @@
+{
+  "name": "24-blocks-git-nopager-push",
+  "stdin": {
+    "tool_input": {
+      "command": "git --no-pager push --force origin main"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 2,
+  "expect_stdout_contains": [
+    "Force push"
+  ]
+}

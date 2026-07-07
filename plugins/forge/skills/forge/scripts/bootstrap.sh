@@ -80,10 +80,16 @@ if house_rules_file and os.path.exists(house_rules_file):
 subs["HOUSE_RULES"] = house_rules
 subs["HOUSE_RULES_BULLETS"] = house_rules
 
+import re as _re
+_PLACEHOLDER = _re.compile(r"\{\{(\w+)\}\}")
 def substitute(text):
-    for k, v in subs.items():
-        text = text.replace("{{%s}}" % k, v)
-    return text
+    # Single pass: a value that itself contains a {{KEY}} literal (e.g. house-rules
+    # text documenting templating) is NOT re-scanned, and an unknown key is left
+    # verbatim on purpose (validate.sh reports genuinely-missing keys separately).
+    return _PLACEHOLDER.sub(lambda m: subs.get(m.group(1), m.group(0)), text)
+
+def has_unsubstituted(text):
+    return any(m.group(1) not in subs for m in _PLACEHOLDER.finditer(text))
 
 def sha256(path):
     h = hashlib.sha256()
@@ -197,6 +203,25 @@ if os.path.exists(guide_src):
         (updated if mode == "upgrade" else installed).append("GUIDE.md")
         new_hashes[key] = sha256(dst)
 
+# Orphan pruning: a file present in the OLD manifest but not written this run was
+# removed/renamed in the newer template. If the on-disk copy is still pristine
+# (hash matches the old manifest), delete it; otherwise leave it and warn, since
+# the user may have come to rely on their modified version.
+orphans_removed, orphans_kept = [], []
+if mode == "upgrade":
+    for key, old_hash in old_hashes.items():
+        if key in new_hashes:
+            continue
+        # key is repo-relative (".claude/..."); resolve against target root
+        abspath = os.path.join(target, key)
+        if not os.path.exists(abspath):
+            continue
+        if sha256(abspath) == old_hash:
+            os.remove(abspath)
+            orphans_removed.append(key)
+        else:
+            orphans_kept.append(key)
+
 manifest = {
     "forge_version": version,
     "mode": mode,
@@ -216,6 +241,12 @@ if updated:
 if conflicts:
     print(f"CONFLICTS (user-modified; new version at <file>.forge-new): {len(conflicts)}")
     for f in conflicts: print(f"  ! {f}")
+if orphans_removed:
+    print(f"pruned (removed from newer template, was pristine): {len(orphans_removed)}")
+    for f in orphans_removed: print(f"  - {f}")
+if orphans_kept:
+    print(f"ORPHANS KEPT (removed from template but you modified them — review/delete manually): {len(orphans_kept)}")
+    for f in orphans_kept: print(f"  ? {f}")
 print(f"preserved user data: {len(skipped_data)}")
 PY
 

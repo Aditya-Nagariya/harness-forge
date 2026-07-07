@@ -1,0 +1,13 @@
+{
+  "name": "25-allows-branch-substring",
+  "stdin": {
+    "tool_input": {
+      "command": "git push origin feature/main-refactor"
+    }
+  },
+  "env": {
+    "PROTECTED_DIRS": "src crates",
+    "PROTECTED_BRANCHES": "main,master"
+  },
+  "expect_exit": 0
+}
