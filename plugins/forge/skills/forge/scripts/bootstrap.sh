@@ -203,6 +203,30 @@ if os.path.exists(guide_src):
         (updated if mode == "upgrade" else installed).append("GUIDE.md")
         new_hashes[key] = sha256(dst)
 
+# harness.env key reconciliation: on upgrade, harness.env is preserved (user data),
+# but a newer template may introduce a new KEY the hooks now read. Append any keys
+# present in the template but missing from the installed file (commented, with the
+# template default) so a new guard is never silently disabled after upgrade.
+env_keys_added = []
+if mode == "upgrade":
+    env_tmpl = os.path.join(templates, "dotclaude", "harness.env.tmpl")
+    env_dst = os.path.join(target, ".claude", "harness.env")
+    if os.path.exists(env_tmpl) and os.path.exists(env_dst):
+        import re as _re2
+        def env_keys(text):
+            return [m.group(1) for m in _re2.finditer(r"^([A-Z_][A-Z0-9_]*)=", text, _re2.MULTILINE)]
+        tmpl_text = substitute(open(env_tmpl, encoding="utf-8").read())
+        tmpl_lines = tmpl_text.splitlines()
+        installed_keys = set(env_keys(open(env_dst, encoding="utf-8").read()))
+        missing = [k for k in env_keys(tmpl_text) if k not in installed_keys]
+        if missing:
+            with open(env_dst, "a", encoding="utf-8") as f:
+                f.write("\n# --- keys added by forge upgrade %s (review and set) ---\n" % version)
+                for k in missing:
+                    line = next((l for l in tmpl_lines if l.startswith(k + "=")), '%s=""' % k)
+                    f.write("# " + line + "\n")
+            env_keys_added = missing
+
 # Orphan pruning: a file present in the OLD manifest but not written this run was
 # removed/renamed in the newer template. If the on-disk copy is still pristine
 # (hash matches the old manifest), delete it; otherwise leave it and warn, since
@@ -247,6 +271,8 @@ if orphans_removed:
 if orphans_kept:
     print(f"ORPHANS KEPT (removed from template but you modified them — review/delete manually): {len(orphans_kept)}")
     for f in orphans_kept: print(f"  ? {f}")
+if env_keys_added:
+    print(f"harness.env: {len(env_keys_added)} new key(s) appended (commented, review & set): {', '.join(env_keys_added)}")
 print(f"preserved user data: {len(skipped_data)}")
 PY
 

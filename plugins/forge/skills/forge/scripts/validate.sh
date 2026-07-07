@@ -64,8 +64,8 @@ note "checked executable bits"
 
 # 4. Leftover placeholders in installed (non-template) files
 if grep -rn "{{[A-Z_]*}}" .claude --include="*.sh" --include="*.json" --include="*.md" \
-     --exclude="harness.env" -l 2>/dev/null | grep -v "\.forge-new$" | head -5 | grep -q .; then
-  grep -rn "{{[A-Z_]*}}" .claude --include="*.sh" --include="*.json" --include="*.md" --exclude="harness.env" -l | grep -v "\.forge-new$" | while read -r f; do
+     --exclude="harness.env" --exclude="self-check.sh" --exclude-dir=memory --exclude-dir=issues-solved -l 2>/dev/null | grep -v "\.forge-new$" | head -5 | grep -q .; then
+  grep -rn "{{[A-Z_]*}}" .claude --include="*.sh" --include="*.json" --include="*.md" --exclude="harness.env" --exclude="self-check.sh" --exclude-dir=memory --exclude-dir=issues-solved -l | grep -v "\.forge-new$" | while read -r f; do
     bad "unsubstituted placeholder in: $f"
   done
   fail=1

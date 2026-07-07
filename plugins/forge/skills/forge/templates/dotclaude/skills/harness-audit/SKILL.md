@@ -1,19 +1,14 @@
 ---
 name: harness-audit
 description: "Self-maintenance pass over the .claude/ harness itself: validate every mechanical invariant (JSON, YAML frontmatter, exec bits, hook tests, regression checks), detect drift and dead weight, and propose upgrades. Run periodically, after any harness change, or via /loop."
-allowed-tools: "Bash(bash .claude/hooks/tests/run-all.sh), Bash(bash .claude/evals/regressions/run-all.sh), Read, Grep, Glob"
+allowed-tools: "Bash(bash .claude/scripts/self-check.sh), Bash(bash .claude/scripts/context-budget.sh), Bash(bash .claude/hooks/tests/run-all.sh), Bash(bash .claude/evals/regressions/run-all.sh), Read, Grep, Glob"
 ---
 
 The self-maintenance half of the harness. Phased like the SENA-main harness-audit methodology (Inventory → Diagnose → Remediate → Update baseline), with the mechanical checks made deterministic. **Fix-forward rule:** anything mechanically checkable that fails gets fixed in this pass, not just reported; judgment calls get proposed to the user.
 
 ## Phase 1 — Mechanical invariants (all must pass; fix what fails)
 
-1. **JSON validity**: every `.claude/**/*.json` parses (`python3 -c "import json; json.load(open(f))"` over a glob).
-2. **YAML frontmatter validity**: every `.claude/agents/*.md` and `.claude/skills/*/SKILL.md` frontmatter parses via `yaml.safe_load` with `name` + `description` present as strings (a documented silent-breakage class: broken frontmatter de-registers the agent with no error until spawn time — see lesson 0002).
-3. **Executable bits**: every `.claude/hooks/*.sh`, `.claude/hooks/tests/run-all.sh`, `.claude/scripts/*.sh`, `.claude/statusline.sh` is executable.
-4. **Hook tests green**: `bash .claude/hooks/tests/run-all.sh` exits 0.
-5. **Regression checks green**: `bash .claude/evals/regressions/run-all.sh` exits 0.
-6. **Wiring completeness**: every hook script referenced in `.claude/settings.json` exists; every hook script on disk is either wired in settings.json or documented as manual-only.
+Run `bash .claude/scripts/self-check.sh` — it verifies JSON validity, agent/skill YAML frontmatter (broken frontmatter silently de-registers an agent until spawn time — lesson 0002), hook exec bits, leftover template placeholders, hook fixtures, regression checks, and the context budget in one pass, exiting nonzero on any failure. Fix whatever it flags, then re-run until clean. Also confirm **wiring completeness** by hand: every hook script referenced in `.claude/settings.json` exists, and every hook script on disk is either wired in settings.json or documented as manual-only.
 
 ## Phase 2 — Drift & dead-weight detection
 

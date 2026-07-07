@@ -3,7 +3,7 @@ name: forge
 description: "Create or upgrade a self-improving Claude Code harness in the current project — self-healing failure ledger, per-file lesson memory, regression evals, small-model elevation agents, deterministic safety hooks. Modes: (no args) auto-detect new vs upgrade; 'doctor' = validate only. Evidence-gated: scan, propose plan, confirm, apply, verify."
 argument-hint: "[doctor]"
 disable-model-invocation: true
-allowed-tools: "Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*.sh *), Read, Grep, Glob"
+allowed-tools: "Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*.sh *), Bash(bash .claude/scripts/self-check.sh), Bash(bash .claude/hooks/*.sh), Read, Grep, Glob"
 ---
 
 You are installing, upgrading, or checking the self-improving harness. The governing principle (from the evidence-gated-installer pattern): **install nothing without evidence and consent — when in doubt, leave it out; unused config costs tokens and trust forever.**
