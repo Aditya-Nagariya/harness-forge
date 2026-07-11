@@ -108,7 +108,7 @@ old_hashes = old_manifest.get("files", {})
 mode = "upgrade" if old_hashes else "new"
 
 # USER-DATA relative paths (under .claude/ unless noted): copy only if absent.
-USER_DATA_PREFIXES = ("memory/", "issues-solved/", "tasks/")
+USER_DATA_PREFIXES = ("memory/", "issues-solved/", "tasks/", "agent-memory/")
 USER_DATA_FILES = {"harness.env", "state/status.json"}
 
 installed, skipped_data, conflicts, updated = [], [], [], []
