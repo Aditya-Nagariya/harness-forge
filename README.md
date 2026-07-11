@@ -2,6 +2,8 @@
 
 One slash command that installs — and later upgrades — a **self-improving Claude Code harness** in any project. The harness it forges makes agents (including small/fast models like Haiku) safer, cheaper, and measurably more reliable, and it gets better over time by converting its own failures into durable, promoted rules.
 
+Want to contribute? See [ROADMAP.md](ROADMAP.md) for independent, self-contained feature write-ups — pick one and you'll know exactly what's being asked and why.
+
 ## What the forged harness contains
 
 | Layer | Mechanism |
