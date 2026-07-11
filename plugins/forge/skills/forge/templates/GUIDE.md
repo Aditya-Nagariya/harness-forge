@@ -12,7 +12,7 @@ Every file in this repository belongs to exactly one zone. The zone determines w
 |---|---|---|---|---|
 | **A — Source** | The product itself | `src/`, tests, build manifests | yes | humans + agents doing tasks |
 | **B — Harness code** | The machinery that makes agents effective | `.claude/hooks/`, `skills/`, `agents/`, `workflows/`, `rules/`, `evals/`, `settings.json`, `statusline.sh`, `loop.md`, `GUIDE.md` | yes | `/forge` upgrades + deliberate harness work only |
-| **C — Durable knowledge** | What the project has learned | `.claude/memory/` (lessons, decisions, activity-log, research), `issues-solved/`, `tasks/`, `agent-memory/`, `harness.env`, `CLAUDE.md`, `state/status.json` | yes | agents + humans, via the lifecycle rules in §4 |
+| **C — Durable knowledge** | What the project has learned | `.claude/memory/` (lessons, decisions, activity-log, research), `issues-solved/`, `tasks/`, `plans/`, `agent-memory/`, `harness.env`, `CLAUDE.md`, `state/status.json` | yes | agents + humans, via the lifecycle rules in §4 |
 | **D — Machine-local state** | Signals and scratch, valid on this machine only | `state/failure-ledger.jsonl`, `state/routing-stats.json`, `state/.HANDOFF.md`, `hooks-state/`, `worktrees/`, build output | **never** (gitignored) | hooks automatically |
 
 Three invariants that follow from the zones:
@@ -33,7 +33,8 @@ Is it something learned, decided, done, or planned?
    A technical bug recipe (>2 iterations or >5 min)         → issues-solved/NNNN-slug.md   (§4.3)
    Why a non-obvious choice was made                        → memory/decisions.md (append one entry)
    What happened (log line)                                 → memory/activity-log.md (append one line)
-   Work to do / in progress                                 → tasks/TASKS.md (§4.1)
+   Work to do / in progress (one line)                      → tasks/TASKS.md (§4.1)
+   Design bigger than one line, smaller than shipped code    → plans/<slug>.md or plans/<slug>/ (§4.7)
    Agent-specific operational knowledge                     → agent-memory/<agent>/MEMORY.md
 Is it a transient signal, cache, or scratch?                → Zone D. Confirm it's gitignored.
 None of the above?                                          → It probably shouldn't exist. Ask.
@@ -46,7 +47,7 @@ None of the above?                                          → It probably shou
 | Writer | May write | Must never write |
 |---|---|---|
 | **Hooks** (deterministic) | `state/status.json` health block, `failure-ledger.jsonl`, `hooks-state/`, activity-log health-flip lines, fingerprint | anything in Zone A or B |
-| **Orchestrator** (main session) | Zone A (tasks), Zone C per lifecycle rules | Zone B (hook-blocked), Zone D directly (hooks own it) |
+| **Orchestrator** (main session) | Zone A (tasks), Zone C per lifecycle rules (incl. `plans/`) | Zone B (hook-blocked), Zone D directly (hooks own it) |
 | **Worker agents** (small-executor etc.) | Zone A within their one step; their own `agent-memory/<name>/MEMORY.md` | anything in `.claude/` outside their memory dir |
 | **Verifier/reviewer agents** | nothing (read-only by tool allowlist) | everything |
 | **`/forge`** | Zone B (hash-guarded), Zone C seeds only-if-absent | existing Zone C content, `harness.env` after install |
@@ -87,6 +88,10 @@ Every *confirmed* past failure that can be mechanically detected becomes a perma
 
 Each agent with `memory: project` accumulates institutional knowledge here (auto-injected into that agent, first 200 lines / 25KB). Keep entries to 1–2 lines; curate past ~150 lines by consolidating, not deleting evidence-bearing entries. Read `MEMORY.md` the file — never the directory path itself.
 
+### 4.7 Plans — `plans/<slug>.md` or `plans/<slug>/`
+
+Full lifecycle in `plans/README.md`. Summary: empty between features by design; a **single file** `plans/<slug>.md` is the default for any design bigger than a `TASKS.md` line; a **folder** `plans/<slug>/` only when the work needs genuinely separable documents (investigation vs. decided design, a regression baseline referenced by multiple phases, a literal-instructions doc for a constrained executor) — every folder still needs a `PLAN.md` entry point. Status is the first line of `PLAN.md` as plain text (`Status: draft | active | archived`), not frontmatter. On ship or abandonment, move it to `plans/archive/` and add a one-line pointer in the closed `tasks/ARCHIVE.md` entry — `/harness-audit` flags a shipped task whose plan wasn't archived. Never autoloaded; not subject to the context-economy budget in §6.
+
 ## 5. Evolving the harness itself (Zone B changes)
 
 The harness is versioned, tested software. A Zone B change requires all three:
@@ -103,6 +108,16 @@ The harness is versioned, tested software. A Zone B change requires all three:
 - **Just-in-time** (on demand): full lessons, issues-solved entries, research digests, this guide — loaded when a trigger matches, not by default.
 - Instruction-following degrades as rule count grows, and small models degrade fastest — which is why mature rules migrate out of prose into hooks, and why this guide is a reference document rather than an always-loaded rulebook.
 - **Regulator:** `/context-budget` (script: `.claude/scripts/context-budget.sh`, gated in CI) measures the always-loaded total and fails over the cap. A self-improving harness accretes rules and lessons; without this it silently bloats. Run it whenever CLAUDE.md or the rules grow.
+- **Path-scoped rules** are the escape hatch when a rule is real but not universal: add `paths:` frontmatter and it loads only when Claude reads a matching file, not on every turn — `context-budget.sh` correctly excludes these from the always-loaded total.
+  ```yaml
+  ---
+  paths:
+    - "src/api/**/*.ts"
+    - "migrations/**/*.sql"
+  ---
+  # API/migration-specific rule body here
+  ```
+  Use this the moment a rule only matters for one subsystem or one language (a Rust-only style rule, a database-migration convention) instead of leaving it always-loaded for everyone.
 
 ## 6a. Checkpoint hygiene (keeping the codebase maintainable)
 

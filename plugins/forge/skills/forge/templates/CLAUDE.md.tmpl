@@ -4,27 +4,22 @@
 
 ## Commands (hooks read these from `.claude/harness.env`)
 
-- Build `{{BUILD_CMD}}` · Test `{{TEST_CMD}}` · Lint `{{LINT_CMD}}` · Format `{{FMT_CMD}}`
+Build `{{BUILD_CMD}}` · Test `{{TEST_CMD}}` · Lint `{{LINT_CMD}}` · Format `{{FMT_CMD}}`
 
-## Live state — keep current
+## Live state
 
-- `.claude/tasks/TASKS.md` — task list, six statuses; completed items move to `ARCHIVE.md` with a verification line.
-- `.claude/state/status.json` — hook-maintained health; never hand-edit.
+`.claude/tasks/TASKS.md` (six-status; completed → `ARCHIVE.md` with a verification line) · `.claude/state/status.json` (hook-maintained, never hand-edit) · `.claude/plans/<slug>` for design work bigger than one task line.
 
 ## Pointers (load on demand — don't inline these here)
 
-- **`.claude/GUIDE.md`** — the management system: four file zones, placement decision tree, who-writes-what, lifecycle rules, the self-healing/learning loop, small-model protocol. Read before creating any file outside the source tree or modifying the harness.
-- **Skills**: `/ship` `/fix-issue` `/milestone-task` `/catchup` `/learn` `/harness-audit` `/context-budget` `/declutter`.
+- **`.claude/GUIDE.md`** — the management system: file zones, placement tree, who-writes-what, lifecycle rules, self-healing loop, small-model protocol. Read before touching the harness or creating a file outside the source tree.
+- **Skills**: `/ship` `/fix-issue` `/milestone-task` `/catchup` `/learn` `/harness-audit` `/context-budget` `/declutter` `/senior-review`.
 - **Rules** (`.claude/rules/`): `safety.md`, `ship-verification.md`, `git-workflow.md`.
-- **Before debugging non-trivially**: grep `.claude/issues-solved/INDEX.md` first.
-- **Agents** (`.claude/agents/`) can't see this file — their prompts restate house rules; don't replace those with references.
+- **Output styles**: `/output-style terse` or `/output-style "Reality-Check Senior"` (see `.claude/output-styles/`).
+- Grep `.claude/issues-solved/INDEX.md` before debugging non-trivially.
+- Agents can't see this file — their prompts restate house rules; don't replace those restatements with a reference.
+- Adding a new skill/agent/hook? Add a pointer here (and in `GUIDE.md` if it changes what `/forge` installs by default) before starting the work — a component nothing points to gets rediscovered from scratch every future session.
 
 ## House rules
 
 {{HOUSE_RULES_BULLETS}}
-
-## Non-negotiables
-
-- Task → `completed` only after end-to-end verification, not just a green build (`ship-verification.md`).
-- Don't hand-edit lockfiles, `status.json` health, or `.claude/hooks/*` (hook-blocked).
-- Don't add an always-loaded rule when a hook or a path-scoped (`paths:`) rule would do — every always-loaded line taxes every turn. Run `/context-budget` if this file or the rules grow.
