@@ -23,12 +23,16 @@ Codebases rot: dead code, unused deps, and commented-out blocks accumulate and m
 
 ## Protocol — small, verified, reversible batches
 
-1. **Inventory, don't delete yet.** Produce a candidate list, each with its evidence (the tool output or the grep showing zero references) and a confidence. Present it; get the user's go-ahead for anything above trivial.
-2. **Guard the danger zone.** Do NOT remove, without explicit confirmation: exported/public API surface (may be used by external callers the repo can't see), anything behind a feature flag / `#[cfg(...)]` / conditional build (check *all* configs, not just the default), test fixtures, or anything referenced only in docs/config/CI. "No caller in this repo" ≠ "unused" for a public symbol.
+1. **Discover + verify in one pass.** Run the `declutter` workflow (`.claude/workflows/declutter.js`) — it discovers candidates (dead-code/dep tooling + a naming/duplicate-pattern sweep), then verifies each one empirically in a single parallel Explore fan-out, one agent per candidate (no separate verify phase; each investigation prompt itself carries "don't trust the name/comment, verify the real wiring"). Report the four buckets it returns, **lede first** (confirmed-dead count and the highest-impact promote-candidate before any per-item detail):
+   - **Confirmed dead** — zero references anywhere, evidence-backed (the grep/tool output is in `evidence`). These are the only items that proceed to step 3.
+   - **Trap** — looked dead but a guard-zone exception or a hidden reference makes it still needed (e.g. a file labeled "ARCHIVED" that's still wired in). Do not touch; the `evidence` field is why.
+   - **Promote candidate** — not dead, but a duplicate/consolidation opportunity (one copy should absorb the other). Flag as a follow-up `TASKS.md` item; never resolve by blindly deleting either copy.
+   - **Needs your call** — evidence is genuinely ambiguous or conflicting. Present it verbatim and wait for the user's decision before doing anything with it.
+2. **Guard the danger zone.** Do NOT remove, without explicit confirmation: exported/public API surface (may be used by external callers the repo can't see), anything behind a feature flag / `#[cfg(...)]` / conditional build (check *all* configs, not just the default), test fixtures, or anything referenced only in docs/config/CI. "No caller in this repo" ≠ "unused" for a public symbol — the workflow's `trap` bucket exists precisely to catch this.
 3. **Remove in small batches** grouped by area, committing after each: e.g. "remove unused imports", then "drop 3 dead helpers", then "remove 2 unused deps". One concern per commit so any regression bisects cleanly.
 4. **Verify after every batch** (`.claude/rules/ship-verification.md` applies): `$BUILD_CMD` + `$TEST_CMD` must stay green, and if the removal touched runtime behavior, actually run the affected path. If anything goes red, `git restore` that batch and record why it wasn't actually dead (that's a lesson for `/learn` — the reference the tool missed).
 5. **Update the map.** If you removed something CLAUDE.md/HARNESS.md/GUIDE.md named, update those pointers. Remove resolved `*.forge-new` files.
-6. **Report** what was removed, the evidence per item, the batches/commits, and the before→after (files, lines, dependency count). Note anything you deliberately *kept* and why (guard-zone items).
+6. **Report** what was removed, the evidence per item, the batches/commits, and the before→after (files, lines, dependency count). Note anything you deliberately *kept* and why (trap/needs-your-call items).
 
 ## Hard rules
 

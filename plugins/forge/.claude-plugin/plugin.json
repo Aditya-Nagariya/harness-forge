@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Create and upgrade a self-improving Claude Code harness in any project: self-healing failure ledger, per-file lesson memory with promotion lifecycle, regression evals, small-model elevation agents, and deterministic safety hooks \u2014 installed via evidence-gated scan, plan, confirm, apply, verify.",
   "keywords": [
     "harness",
