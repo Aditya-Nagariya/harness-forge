@@ -1,10 +1,21 @@
 # Ship verification
 
-A successful build is not the same as a working feature. A `TASKS.md` item may only move to `completed` after the actual behavior was exercised end-to-end, not merely after the code compiles or an isolated unit test passes.
+A successful build ≠ a working feature.
 
-Concretely, before marking a task `completed`:
-- If it changed user-facing behavior: run the actual application/binary/endpoint and look at real output, not just the test suite.
-- If it's a guardrail (validation, limit, timeout): trigger the refusal/failure path for real once — don't just unit-test the arithmetic.
-- State how it was verified in the `TASKS.md` entry (or `ARCHIVE.md` once moved): "verified: ran <exact command>, observed <specific result>" — not just "done."
+| Layer | "Pass" signal | What it proves |
+|---|---|---|
+| Transport | HTTP 200, a handshake, "no exception" | The pipe is open |
+| **Feature** | The field got the **right value** / the right thing happened | It actually works |
 
-Rationale: exit-0-while-semantically-failing is the single most common silent failure mode in automated work; the verification statement makes every "done" claim falsifiable.
+`completed` requires the Feature row, not just Transport.
+
+Before marking a task `completed`:
+1. Run the real behavior end-to-end, look at real output — not just the test suite.
+2. Two-sided protocol? Simulate the other side properly (send the ack/handshake the server waits on), or the feature silently dies as it would against a broken client.
+3. Guardrail (validation/limit/timeout)? Trigger the real refusal path once — don't just unit-test the arithmetic.
+4. Verifying a running/deployed instance? Confirm it actually loaded the change (version check/restart), not just "the local source has the fix."
+5. **Never round up** — an unproven sub-step is "transport verified, feature UNVERIFIED," not "done."
+6. Save non-trivial verification as a committed, re-runnable script so the next ship re-verifies in one step.
+7. State how it was verified in `TASKS.md`/`ARCHIVE.md`: `verified: ran <exact command>, observed <result>`.
+
+Rationale: exit-0-while-semantically-failing is the most common silent failure mode; the verification statement makes "done" falsifiable.
