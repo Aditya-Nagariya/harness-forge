@@ -98,6 +98,12 @@ for (let i = 0; i < steps.length; i++) {
 }
 
 const done = results.filter((r) => r.ok).length
-log(`${done}/${steps.length} steps verified. Routing outcomes returned in result.routing — append them to .claude/state/routing-stats.json (steps that chronically escalate should be dispatched to the stronger model directly next time).`)
+// NOTE for whoever calls this workflow: Workflow scripts have no filesystem access,
+// so THIS SCRIPT CANNOT WRITE THE FILE ITSELF. The calling session is responsible for
+// appending `result.routing` to .claude/state/routing-stats.json after this returns
+// (e.g. one JSON-lines append per step). harness-audit's Phase 2 reads that file if it
+// exists and reports chronic escalators — so the loop only closes if the caller does
+// this step; skipping it just means no history accumulates, not an error.
+log(`${done}/${steps.length} steps verified. Routing outcomes in result.routing — append them to .claude/state/routing-stats.json now (steps that chronically escalate should be dispatched to the stronger model directly next time; harness-audit reads this file).`)
 
 return { results, routing }

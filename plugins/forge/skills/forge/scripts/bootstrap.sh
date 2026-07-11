@@ -108,10 +108,71 @@ old_hashes = old_manifest.get("files", {})
 mode = "upgrade" if old_hashes else "new"
 
 # USER-DATA relative paths (under .claude/ unless noted): copy only if absent.
-USER_DATA_PREFIXES = ("memory/", "issues-solved/", "tasks/", "agent-memory/")
-USER_DATA_FILES = {"harness.env", "state/status.json"}
+USER_DATA_PREFIXES = ("memory/", "issues-solved/", "tasks/", "agent-memory/", "plans/")
+USER_DATA_FILES = {"harness.env", "state/status.json", "skills/harness-audit/references/baseline.md"}
 
-installed, skipped_data, conflicts, updated = [], [], [], []
+def merge_settings_json(current_text, incoming_text):
+    """Semantic merge for the one settings.json divergence that matters most:
+    the hooks arrays. Concatenates+dedupes hook entries by (matcher, command) so a
+    user-added hook survives an upgrade that also adds new template hooks, instead
+    of forcing a full manual .forge-new merge for every settings.json edit. Returns
+    (merged_dict_or_None, ambiguous). ambiguous=True means fall back to .forge-new
+    (a real, non-array conflict this simple merge can't resolve safely).
+    """
+    try:
+        current = json.loads(current_text)
+        incoming = json.loads(incoming_text)
+    except Exception:
+        return None, True
+
+    merged = dict(current)
+    ambiguous = False
+
+    cur_hooks = current.get("hooks", {}) or {}
+    inc_hooks = incoming.get("hooks", {}) or {}
+    merged_hooks = dict(cur_hooks)
+    for event, inc_blocks in inc_hooks.items():
+        cur_blocks = cur_hooks.get(event, [])
+        # Flatten to (matcher, command) -> hook-command-dict, current's version wins
+        # on a duplicate (it may carry a user-customized timeout).
+        seen = {}
+        ordered_keys = []
+        def index_block(blocks):
+            for block in blocks or []:
+                matcher = block.get("matcher", "")
+                for h in block.get("hooks", []) or []:
+                    k = (matcher, h.get("command", ""))
+                    if k not in seen:
+                        ordered_keys.append(k)
+                    seen[k] = (matcher, h)  # last-seen value; we index current AFTER incoming so current wins
+        index_block(inc_blocks)
+        index_block(cur_blocks)  # indexed second so current's entry overwrites incoming's on collision
+        # Regroup by matcher, preserving first-seen order.
+        by_matcher = {}
+        matcher_order = []
+        for k in ordered_keys:
+            matcher, h = seen[k]
+            if matcher not in by_matcher:
+                by_matcher[matcher] = []
+                matcher_order.append(matcher)
+            by_matcher[matcher].append(h)
+        merged_hooks[event] = [{"matcher": m, "hooks": by_matcher[m]} for m in matcher_order]
+    merged["hooks"] = merged_hooks
+
+    # Any other top-level key: incoming adds what's missing from current; where
+    # both define a non-hooks key with a DIFFERENT value, keep current (user's
+    # customization wins for singular config like statusLine) rather than treat
+    # it as a hard conflict — only a structurally different "hooks" shape would
+    # be a real ambiguity, and the merge above already handles that generically.
+    for key, val in incoming.items():
+        if key == "hooks":
+            continue
+        if key not in merged:
+            merged[key] = val
+
+    return merged, ambiguous
+
+installed, skipped_data, conflicts, updated, merged_files = [], [], [], [], []
 new_hashes = {}
 
 dotclaude_src = os.path.join(templates, "dotclaude")
@@ -147,7 +208,16 @@ for root, dirs, files in os.walk(dotclaude_src):
                 new_hashes[key] = current
                 continue
             if recorded and current != recorded:
-                # user modified it — never clobber
+                if out_rel == "settings.json":
+                    merged, ambiguous = merge_settings_json(open(dst, encoding="utf-8").read(), content)
+                    if merged is not None and not ambiguous:
+                        merged_text = json.dumps(merged, indent=2) + "\n"
+                        os.remove(tmp)
+                        open(dst, "w", encoding="utf-8").write(merged_text)
+                        merged_files.append(out_rel)
+                        new_hashes[key] = sha256(dst)
+                        continue
+                # user modified it (or merge was ambiguous) — never clobber
                 os.replace(tmp, dst + ".forge-new")
                 conflicts.append(out_rel)
                 new_hashes[key] = current
@@ -262,6 +332,9 @@ for f in installed: print(f"  + {f}")
 if updated:
     print(f"updated (pristine): {len(updated)}")
     for f in updated: print(f"  ~ {f}")
+if merged_files:
+    print(f"merged (your customizations + new template entries combined): {len(merged_files)}")
+    for f in merged_files: print(f"  * {f}")
 if conflicts:
     print(f"CONFLICTS (user-modified; new version at <file>.forge-new): {len(conflicts)}")
     for f in conflicts: print(f"  ! {f}")
