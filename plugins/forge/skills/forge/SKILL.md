@@ -40,6 +40,12 @@ Write the confirmed house rules to a temp file, then run `bootstrap.sh` with the
 2. Positively test one gate's block path: `echo '{"tool_input":{"command":"git push --force origin main"}}' | bash .claude/hooks/block-dangerous-commands.sh` must exit 2 (a gate whose failure mode is "silently allow" must be demonstrated to fire, never assumed).
 3. If upgrading: list every `.forge-new` conflict and offer to merge each one (show the diff, let the user decide).
 
+### Phase 4.5 — Unattended loop (optional, ask first)
+
+Only on a fresh install (not every upgrade): ask the user via AskUserQuestion whether to set up unattended background maintenance — `/loop` running on an OS-level schedule (launchd on macOS, cron on Linux) even when no Claude Code session is open, doing real work but never auto-committing (results land in `.claude/state/unattended-runs/` for review). Default answer if asked generically: recommend yes on a solo/personal project, since it's the only way `/loop` runs when nobody's around to invoke it manually.
+
+If confirmed: ask for an interval in hours (suggest 6 as a default), then run `bash .claude/scripts/setup-unattended-loop.sh <hours> install` and report the result verbatim (which OS mechanism it used, where the entry lives). If declined or the platform isn't macOS/Linux, skip silently — this step is never required.
+
 ### Phase 5 — Report
 
-Summarize: installed/updated/preserved/conflicts, the harness.env values, where the management guide lives (`.claude/GUIDE.md`), and the three commands the user should know: `/learn`, `/harness-audit`, `/ship`. Remind: restart the session (or start a new one) so SessionStart hooks and new agents load.
+Summarize: installed/updated/preserved/conflicts, the harness.env values, where the management guide lives (`.claude/GUIDE.md`), and the three commands the user should know: `/learn`, `/harness-audit`, `/ship`, and whether unattended background maintenance is running (Phase 4.5). Remind: restart the session (or start a new one) so SessionStart hooks and new agents load.
