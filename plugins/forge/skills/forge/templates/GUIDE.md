@@ -147,7 +147,7 @@ Committed: zones A, B, C — including `agent-memory/` and `state/status.json` (
 
 | Seam | State files | Notes |
 |---|---|---|
-| `capability-gate.sh` (PreToolUse) | `.claude/state/last-loop-run.json`, `.claude/state/.skillseek-used-this-session` | `record-loop-run.sh` (called by `loop.md`'s final step) writes the former; the PostToolUse SkillSeek-search matcher in `settings.json` writes the latter. If either writer is ever removed, the gate silently reads stale/missing state — check both still exist before removing either. |
+| `capability-gate.sh` (PreToolUse) | `.claude/state/last-loop-run.json`, `.claude/state/.skillseek-used-this-session` | `record-loop-run.sh` (called by `loop.md`'s Step 0 and its final step) writes the former; the PostToolUse SkillSeek-search matcher in `settings.json` writes the latter. If either writer is ever removed, the gate silently reads stale/missing state — check both still exist before removing either. |
 
 ## 10. Recommended companions
 
