@@ -326,6 +326,18 @@ manifest = {
 os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
 json.dump(manifest, open(manifest_path, "w"), indent=2)
 
+# Fresh installs get a pre-seeded last-loop-run.json so capability-gate.sh's
+# overdue clock starts at install time, not "missing file = infinitely overdue."
+if mode == "new":
+    from datetime import datetime, timezone
+    loop_state_path = os.path.join(target, ".claude", "state", "last-loop-run.json")
+    os.makedirs(os.path.dirname(loop_state_path), exist_ok=True)
+    if not os.path.exists(loop_state_path):
+        json.dump(
+            {"last_run": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
+            open(loop_state_path, "w"),
+        )
+
 print(f"mode: {mode}")
 print(f"installed: {len(installed)}")
 for f in installed: print(f"  + {f}")
