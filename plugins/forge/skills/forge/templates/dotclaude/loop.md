@@ -9,3 +9,14 @@ You are on a maintenance iteration. Do the highest-value item below, then stop; 
 5. **Idle case.** If everything is clean and there is no in-flight work, pick the lowest-numbered `pending` task in `TASKS.md` and start it via `/milestone-task`.
 
 Rules: never `--force` anything, never push, never mark a task `completed` without the ship-verification bar, and prefer finishing over starting.
+
+## Unattended mode
+
+If the `$FORGE_UNATTENDED` environment variable is set, nobody is watching this run in real time:
+
+- Skip `/ship`'s commit/push steps entirely, regardless of how confident the change looks. A task reaching `/milestone-task`'s or `/ship`'s commit point stops at "implemented and verified, NOT committed" — an `ask`-style confirmation would hang forever with nobody to answer it.
+- As your final action, write `.claude/state/unattended-runs/<UTC timestamp, format YYYY-MM-DDTHH-MM-SSZ>-summary.md` (use `-` not `:` in the time portion — colons are invalid in filenames on some filesystems) containing: what step of the loop ran, what was done, the exact verification commands run and their output, and the working tree's current `git status --short` so the next interactive session can review and decide whether to commit.
+
+## Final step (always, both modes)
+
+Run `bash .claude/scripts/record-loop-run.sh` as your last action, whether or not `$FORGE_UNATTENDED` is set — this is what tells `capability-gate.sh` the loop ran.
