@@ -13,7 +13,8 @@
         "matcher": "Write|Edit",
         "hooks": [
           { "type": "command", "command": "bash .claude/hooks/protect-files.sh", "timeout": 10 },
-          { "type": "command", "command": "bash .claude/hooks/scan-secrets.sh", "timeout": 10 }
+          { "type": "command", "command": "bash .claude/hooks/scan-secrets.sh", "timeout": 10 },
+          { "type": "command", "command": "bash .claude/hooks/capability-gate.sh", "timeout": 10 }
         ]
       },
       {
@@ -32,6 +33,12 @@
           { "type": "command", "command": "bash .claude/hooks/auto-test.sh", "timeout": 300 },
           { "type": "command", "command": "bash .claude/hooks/bump-updated.sh", "timeout": 10 },
           { "type": "command", "command": "bash .claude/hooks/issue-capture-reminder.sh", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "mcp__skillseek__skill_search",
+        "hooks": [
+          { "type": "command", "command": "touch .claude/state/.skillseek-used-this-session", "timeout": 5 }
         ]
       }
     ],

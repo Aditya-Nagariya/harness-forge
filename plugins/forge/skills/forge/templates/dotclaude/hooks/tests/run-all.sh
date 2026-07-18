@@ -38,6 +38,23 @@ for hook_dir in "$FIXTURES_DIR"/*/; do
       env_args+=("$k=$v")
     done < <(jq -r '.env // {} | to_entries[] | "\(.key)=\(.value)"' "$fixture")
 
+    stage_dir=""
+    for kv in "${env_args[@]+"${env_args[@]}"}"; do
+      case "$kv" in
+        FORGE_STATE_DIR=*) stage_dir="${kv#FORGE_STATE_DIR=}" ;;
+      esac
+    done
+    if [ -n "$stage_dir" ]; then
+      rm -rf "$stage_dir"
+      mkdir -p "$stage_dir"
+      while IFS='=' read -r rel_path content; do
+        [ -z "$rel_path" ] && continue
+        full_path="$stage_dir/$rel_path"
+        mkdir -p "$(dirname "$full_path")"
+        printf '%s' "$content" > "$full_path"
+      done < <(jq -r '.stage // {} | to_entries[] | "\(.key)=\(.value)"' "$fixture")
+    fi
+
     stdout_file="$(mktemp)"
     stderr_file="$(mktemp)"
     printf '%s' "$stdin_json" | env "${env_args[@]+"${env_args[@]}"}" bash "$hook_script" >"$stdout_file" 2>"$stderr_file"

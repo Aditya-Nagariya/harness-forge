@@ -142,3 +142,13 @@ If you are a small/fast model working in this repository, follow these and you w
 ## 8. Git policy summary
 
 Committed: zones A, B, C — including `agent-memory/` and `state/status.json` (shared team knowledge) and `state/.fingerprint.json` (shared drift baseline). Gitignored: all of zone D, plus `CLAUDE.local.md` (personal) — the forge-appended block in `.gitignore` is the canonical list. Never commit: secrets (hook-scanned), lockfile hand-edits (hook-blocked), `*.forge-new` merge artifacts (resolve them, then delete).
+
+## 9. Wiring seams (interconnections that must stay connected)
+
+| Seam | State files | Notes |
+|---|---|---|
+| `capability-gate.sh` (PreToolUse) | `.claude/state/last-loop-run.json`, `.claude/state/.skillseek-used-this-session` | `record-loop-run.sh` (called by `loop.md`'s Step 0 and its final step) writes the former; the PostToolUse SkillSeek-search matcher in `settings.json` writes the latter. If either writer is ever removed, the gate silently reads stale/missing state — check both still exist before removing either. |
+
+## 10. Recommended companions
+
+- **[SkillSeek](https://github.com/TheQmaks/skillseek)** — indexes every locally-installed skill (including plugin-bundled ones) for BM25 search, so the model can find a relevant skill instead of missing it under Claude Code's `skillListingBudgetFraction` cap. `capability-gate.sh` checks for its presence and adapts (requires a search before the first source edit if installed; skips that condition entirely if not) — never bundled or auto-installed by `/forge`. Install separately: `/plugin marketplace add https://github.com/TheQmaks/skillseek` then `/plugin install skillseek`.

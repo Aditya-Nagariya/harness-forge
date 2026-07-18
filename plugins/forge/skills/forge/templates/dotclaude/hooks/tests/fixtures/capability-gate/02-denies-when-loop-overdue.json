@@ -1,0 +1,10 @@
+{
+  "name": "denies first source edit when /loop is overdue and gate not yet checked",
+  "stdin": { "tool_input": { "file_path": "/repo/src/main.py", "content": "x" } },
+  "expect_exit": 2,
+  "expect_stdout_contains": ["deny", "/loop"],
+  "env": {
+    "FORGE_STATE_DIR": "/tmp/capgate-fixture-02-state",
+    "LOOP_OVERDUE_HOURS": "24"
+  }
+}

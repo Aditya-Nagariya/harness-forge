@@ -1,0 +1,9 @@
+{
+  "name": "allows edits under .claude/ regardless of overdue state (anti-deadlock)",
+  "stdin": { "tool_input": { "file_path": "/repo/.claude/memory/lessons/0009-example.md", "content": "x" } },
+  "expect_exit": 0,
+  "env": {
+    "FORGE_STATE_DIR": "/tmp/capgate-fixture-01-state",
+    "LOOP_OVERDUE_HOURS": "24"
+  }
+}

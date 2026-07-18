@@ -1,0 +1,13 @@
+{
+  "name": "allows when /loop ran recently and SkillSeek is not installed (fail-open)",
+  "stdin": { "tool_input": { "file_path": "/repo/src/main.py", "content": "x" } },
+  "expect_exit": 0,
+  "env": {
+    "FORGE_STATE_DIR": "/tmp/capgate-fixture-03-state",
+    "LOOP_OVERDUE_HOURS": "24",
+    "FORGE_SKILLSEEK_INDEX": "/tmp/capgate-fixture-03-state/nonexistent-index.json"
+  },
+  "stage": {
+    "last-loop-run.json": "{\"last_run\": \"2099-01-01T00:00:00Z\"}"
+  }
+}
