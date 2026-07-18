@@ -19,9 +19,9 @@ _PRE_STATE_DIR="${FORGE_STATE_DIR:-}"
 _PRE_OVERDUE="${LOOP_OVERDUE_HOURS:-}"
 _PRE_SKILLSEEK_INDEX="${FORGE_SKILLSEEK_INDEX:-}"
 [ -f "$PROJECT_ROOT/.claude/harness.env" ] && . "$PROJECT_ROOT/.claude/harness.env"
-STATE_DIR="${_PRE_STATE_DIR:-$PROJECT_ROOT/.claude/state}"
+STATE_DIR="${_PRE_STATE_DIR:-${FORGE_STATE_DIR:-$PROJECT_ROOT/.claude/state}}"
 LOOP_OVERDUE_HOURS="${_PRE_OVERDUE:-${LOOP_OVERDUE_HOURS:-24}}"
-SKILLSEEK_INDEX="${_PRE_SKILLSEEK_INDEX:-$HOME/.claude/SKILLS-INDEX.json}"
+SKILLSEEK_INDEX="${_PRE_SKILLSEEK_INDEX:-${FORGE_SKILLSEEK_INDEX:-$HOME/.claude/SKILLS-INDEX.json}}"
 
 if ! command -v python3 >/dev/null 2>&1; then
   exit 0
@@ -33,7 +33,7 @@ FILE_PATH="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get
 
 # Anti-deadlock: never gate anything under .claude/ (memory, tasks, state, hooks...).
 case "$FILE_PATH" in
-  */.claude/*) exit 0 ;;
+  */.claude/*|.claude/*) exit 0 ;;
 esac
 
 GATE_FLAG="$STATE_DIR/.gate-checked-this-session"
@@ -77,7 +77,7 @@ reasons=()
 [ "$loop_overdue" = "true" ] && reasons+=("run /loop first (self-healing maintenance is overdue)")
 [ "$skillseek_satisfied" = "false" ] && reasons+=("call the skill_search MCP tool first (SkillSeek is installed but hasn't been used this session — you may be missing a relevant installed skill)")
 
-reason_text="$(IFS='; '; echo "${reasons[*]}")"
+reason_text="$(IFS='; '; echo "${reasons[*]+${reasons[*]}}")"
 python3 -c "
 import json, sys
 print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny', 'permissionDecisionReason': sys.argv[1]}}))
