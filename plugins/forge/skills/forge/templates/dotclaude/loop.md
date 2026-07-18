@@ -2,6 +2,8 @@
 
 You are on a maintenance iteration. Do the highest-value item below, then stop; the loop will bring you back.
 
+**Step 0 (always, first action, before anything else).** Run `bash .claude/scripts/record-loop-run.sh`. This stamps `.claude/state/last-loop-run.json` immediately so `capability-gate.sh` sees `/loop` as current — otherwise steps 1 and 5 below (which can involve editing real source files) would be blocked by the very gate this run is meant to satisfy, since the gate's "loop ran recently" check wouldn't be true yet. Running it again as the final step (below) is harmless and keeps the timestamp reflecting actual completion time too.
+
 1. **Finish in-flight work first.** If `.claude/tasks/TASKS.md` has anything `running`, `broken`, or `needs-fix`, that outranks everything here — resume it.
 2. **Convert failure signal into lessons.** If `.claude/state/failure-ledger.jsonl` has signatures with ≥2 occurrences, run `/learn`.
 3. **Checkpoint hygiene (only when a milestone/feature just completed and the tree is green).** Run `/context-budget`; if it's NEAR LIMIT or OVER, trim per that skill. Then run `/declutter` to prune dead code / unused deps / orphaned files accumulated during the feature. Skip both mid-feature.
