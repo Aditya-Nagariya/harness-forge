@@ -1,0 +1,15 @@
+{
+  "name": "denies when /loop is recent but SkillSeek is installed and not yet searched this session",
+  "stdin": { "tool_input": { "file_path": "/repo/src/main.py", "content": "x" } },
+  "expect_exit": 2,
+  "expect_stdout_contains": ["deny", "skill_search"],
+  "env": {
+    "FORGE_STATE_DIR": "/tmp/capgate-fixture-04-state",
+    "LOOP_OVERDUE_HOURS": "24",
+    "FORGE_SKILLSEEK_INDEX": "/tmp/capgate-fixture-04-state/present-index.json"
+  },
+  "stage": {
+    "last-loop-run.json": "{\"last_run\": \"2099-01-01T00:00:00Z\"}",
+    "present-index.json": "{}"
+  }
+}

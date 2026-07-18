@@ -1,0 +1,12 @@
+{
+  "name": "allows immediately once .gate-checked-this-session is already set",
+  "stdin": { "tool_input": { "file_path": "/repo/src/main.py", "content": "x" } },
+  "expect_exit": 0,
+  "env": {
+    "FORGE_STATE_DIR": "/tmp/capgate-fixture-05-state",
+    "LOOP_OVERDUE_HOURS": "24"
+  },
+  "stage": {
+    ".gate-checked-this-session": ""
+  }
+}
