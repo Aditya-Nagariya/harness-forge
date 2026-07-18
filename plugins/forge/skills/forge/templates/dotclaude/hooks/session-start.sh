@@ -14,6 +14,11 @@ FINGERPRINT_FILES="${FINGERPRINT_FILES:-}"
 STATUS_FILE=".claude/state/status.json"
 TASKS_FILE=".claude/tasks/TASKS.md"
 
+# Clear per-session capability-gate flags so a new session re-checks both
+# conditions (/loop overdue, SkillSeek search used) exactly once.
+rm -f "$PROJECT_ROOT/.claude/state/.gate-checked-this-session" \
+      "$PROJECT_ROOT/.claude/state/.skillseek-used-this-session"
+
 health_summary="status.json not found"
 if [ -f "$STATUS_FILE" ] && command -v python3 >/dev/null 2>&1; then
   health_summary="$(python3 - "$STATUS_FILE" <<'PY'
@@ -35,6 +40,15 @@ fi
 
 git_summary="$(git status --short 2>/dev/null | head -10 || echo "(not a git repo or no changes)")"
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "no-git")"
+
+unattended_summary=""
+UNATTENDED_DIR="$PROJECT_ROOT/.claude/state/unattended-runs"
+if [ -d "$UNATTENDED_DIR" ]; then
+  pending_count="$(find "$UNATTENDED_DIR" -name '*-summary.md' 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "${pending_count:-0}" -gt 0 ]; then
+    unattended_summary="$pending_count unattended /loop run(s) awaiting review in .claude/state/unattended-runs/ — read each *-summary.md and decide whether to commit its (currently uncommitted) work."
+  fi
+fi
 
 # --- Config-drift fingerprint: hash the manifest surface; nudge once on change ---
 drift_line=""
@@ -124,6 +138,7 @@ $PROJECT_NAME session start summary:
 - Working tree changes (first 10 lines):
 $git_summary
 $drift_line
+$unattended_summary
 $lessons_block
 $hotspots_block
 - Management rules for files/folders/data: .claude/GUIDE.md (read before creating any new file outside src).
