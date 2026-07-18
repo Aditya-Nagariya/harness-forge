@@ -17,7 +17,9 @@ else
 fi
 LABEL="com.forge.unattended-loop.${PROJECT_HASH}"
 
-if ! command -v claude >/dev/null 2>&1; then
+# --remove only deletes the scheduler entry — it never invokes `claude`, so
+# don't block uninstalling in an environment where the CLI isn't on PATH.
+if [ "$ACTION" != "--remove" ] && ! command -v claude >/dev/null 2>&1; then
   echo "error: 'claude' CLI not found on PATH — cannot install an unattended loop that invokes it." >&2
   exit 1
 fi
@@ -56,13 +58,24 @@ EOF
 
 elif [ "$os" = "Linux" ]; then
   CRON_MARKER="# forge-unattended-loop:${LABEL}"
+  # `grep -v` exits 1 when it filters out every line — the common case of no
+  # prior crontab, or a crontab containing only this tool's own entry. Under
+  # `set -euo pipefail` that nonzero status would otherwise abort the script
+  # mid-pipeline: on install, before `echo "$CRON_LINE"` ever runs, which
+  # would write an EMPTY crontab and silently wipe any unrelated existing
+  # entries; on remove, before reporting success. Capture the existing
+  # crontab into a variable first and guard each grep with `|| true` so "no
+  # lines matched" is treated as an expected empty result, not a failure.
+  EXISTING_CRON="$(crontab -l 2>/dev/null || true)"
   if [ "$ACTION" = "--remove" ]; then
-    crontab -l 2>/dev/null | grep -vF "$CRON_MARKER" | grep -vF "$WRAPPER" | crontab -
+    FILTERED_CRON="$(printf '%s\n' "$EXISTING_CRON" | grep -vF "$CRON_MARKER" | grep -vF "$WRAPPER" || true)"
+    printf '%s\n' "$FILTERED_CRON" | crontab -
     echo "removed cron entry for $LABEL"
     exit 0
   fi
   CRON_LINE="0 */${INTERVAL_HOURS} * * * /bin/bash ${WRAPPER} ${CRON_MARKER}"
-  (crontab -l 2>/dev/null | grep -vF "$CRON_MARKER"; echo "$CRON_LINE") | crontab -
+  FILTERED_CRON="$(printf '%s\n' "$EXISTING_CRON" | grep -vF "$CRON_MARKER" || true)"
+  { printf '%s\n' "$FILTERED_CRON"; echo "$CRON_LINE"; } | crontab -
   echo "installed cron entry: every ${INTERVAL_HOURS}h"
 
 else
