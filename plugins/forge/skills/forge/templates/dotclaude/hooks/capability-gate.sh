@@ -21,6 +21,10 @@ _PRE_SKILLSEEK_INDEX="${FORGE_SKILLSEEK_INDEX:-}"
 [ -f "$PROJECT_ROOT/.claude/harness.env" ] && . "$PROJECT_ROOT/.claude/harness.env"
 STATE_DIR="${_PRE_STATE_DIR:-${FORGE_STATE_DIR:-$PROJECT_ROOT/.claude/state}}"
 LOOP_OVERDUE_HOURS="${_PRE_OVERDUE:-${LOOP_OVERDUE_HOURS:-24}}"
+# Default path and the settings.json PostToolUse matcher name (mcp__skillseek__skill_search)
+# are both verified against SkillSeek v0.2.1's real source (src/lib.mjs's defaultIndexPath,
+# src/mcp-server.mjs's server.tool("skill_search", ...)) — not just inferred from naming
+# convention. Re-verify against SkillSeek's source if its major version ever changes.
 SKILLSEEK_INDEX="${_PRE_SKILLSEEK_INDEX:-${FORGE_SKILLSEEK_INDEX:-$HOME/.claude/SKILLS-INDEX.json}}"
 
 if ! command -v python3 >/dev/null 2>&1; then
