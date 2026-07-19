@@ -17,7 +17,8 @@ TASKS_FILE=".claude/tasks/TASKS.md"
 # Clear per-session capability-gate flags so a new session re-checks both
 # conditions (/loop overdue, SkillSeek search used) exactly once.
 rm -f "$PROJECT_ROOT/.claude/state/.gate-checked-this-session" \
-      "$PROJECT_ROOT/.claude/state/.skillseek-used-this-session"
+      "$PROJECT_ROOT/.claude/state/.skillseek-used-this-session" \
+      "$PROJECT_ROOT/.claude/state/.skillseek-denied-once"
 
 health_summary="status.json not found"
 if [ -f "$STATUS_FILE" ] && command -v python3 >/dev/null 2>&1; then

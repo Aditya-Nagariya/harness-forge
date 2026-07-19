@@ -46,3 +46,5 @@ Close with one line: `N/N checks passed | M fixed inline | K flagged`. If everyt
 ## Phase 4 — Update the baseline
 
 Append what changed this run to `references/baseline.md`'s change log (dated, one line) — new wiring, a newly-decided convention, a gotcha discovered this run. This is what makes the baseline a living document instead of a report that gets thrown away after every invocation.
+
+Also append one dated line to `memory/decisions.md`: `[harness-audit] <date> — <N>/<N> checks, <one-phrase outcome>`. This line is exactly what Phase 0's 14-day skip-condition reads — without it, the anti-churn skip can never trigger (this seam was found broken by the harness's own first unattended audit run).

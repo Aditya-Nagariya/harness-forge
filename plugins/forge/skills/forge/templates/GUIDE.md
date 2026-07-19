@@ -147,7 +147,7 @@ Committed: zones A, B, C — including `agent-memory/` and `state/status.json` (
 
 | Seam | State files | Notes |
 |---|---|---|
-| `capability-gate.sh` (PreToolUse) | `.claude/state/last-loop-run.json`, `.claude/state/.skillseek-used-this-session` | `record-loop-run.sh` (called by `loop.md`'s Step 0 and its final step) writes the former; the PostToolUse SkillSeek-search matcher in `settings.json` writes the latter. If either writer is ever removed, the gate silently reads stale/missing state — check both still exist before removing either. |
+| `capability-gate.sh` (PreToolUse) | `.claude/state/last-loop-run.json`, `.claude/state/.skillseek-used-this-session`, `.claude/state/.skillseek-denied-once` | `record-loop-run.sh` (called by `loop.md`'s Step 0 and its final step) writes the first; the PostToolUse SkillSeek-search matcher in `settings.json` writes the second; the gate itself writes the third (one-shot safety valve: the SkillSeek condition blocks at most once per session, so a stale index with the plugin uninstalled can't deadlock a session). `session-start.sh` clears all per-session flags. If any writer is ever removed, the gate silently reads stale/missing state — check the seam before removing either side. |
 
 ## 10. Recommended companions
 

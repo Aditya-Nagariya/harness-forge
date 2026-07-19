@@ -71,6 +71,18 @@ if [ "$skillseek_installed" = "true" ] && [ ! -f "$SEARCH_FLAG" ]; then
   skillseek_satisfied="false"
 fi
 
+# One-shot safety valve (stress-tested failure mode: a stale index file with the
+# plugin actually uninstalled makes skill_search uncallable — without this, the
+# session hard-deadlocks with no escape). The SkillSeek condition denies at most
+# ONCE per session: a working SkillSeek setup resolves on the first deny exactly
+# as before; a broken one costs one retry instead of total task failure. The
+# /loop-overdue condition is NOT softened — it stays a hard gate, because its
+# remedy (record-loop-run.sh) always exists in the project.
+DENIED_ONCE_FLAG="$STATE_DIR/.skillseek-denied-once"
+if [ "$skillseek_satisfied" = "false" ] && [ -f "$DENIED_ONCE_FLAG" ]; then
+  skillseek_satisfied="true"
+fi
+
 if [ "$loop_overdue" = "false" ] && [ "$skillseek_satisfied" = "true" ]; then
   mkdir -p "$STATE_DIR"
   touch "$GATE_FLAG"
@@ -78,8 +90,12 @@ if [ "$loop_overdue" = "false" ] && [ "$skillseek_satisfied" = "true" ]; then
 fi
 
 reasons=()
-[ "$loop_overdue" = "true" ] && reasons+=("run /loop first (self-healing maintenance is overdue)")
-[ "$skillseek_satisfied" = "false" ] && reasons+=("call the skill_search MCP tool first (SkillSeek is installed but hasn't been used this session — you may be missing a relevant installed skill)")
+[ "$loop_overdue" = "true" ] && reasons+=("complete the maintenance loop in .claude/loop.md — run /loop if available, otherwise follow that file directly; its Step 0 is: bash .claude/scripts/record-loop-run.sh")
+if [ "$skillseek_satisfied" = "false" ]; then
+  reasons+=("call the skill_search MCP tool first (SkillSeek is installed but hasn't been used this session — you may be missing a relevant installed skill). If that tool is not available, just retry: this condition only blocks once per session")
+  mkdir -p "$STATE_DIR"
+  touch "$DENIED_ONCE_FLAG"
+fi
 
 reason_text="$(IFS='; '; echo "${reasons[*]+${reasons[*]}}")"
 python3 -c "
