@@ -2,19 +2,24 @@
 
 The requirements below are the maintainer's next-phase wish list for harness-forge, cleaned up from raw notes into independent, self-contained write-ups. Each section stands alone on purpose: if you want to contribute, pick one section, read only that section, and you should know exactly what's being asked, why, and what's already been researched — without needing the rest of this file for context.
 
-None of these are started. **Status: proposed** on every item unless noted otherwise. Where a section says "open question," that's a real fork the maintainer hasn't resolved yet — raise it in your PR/issue rather than guessing.
+**Status: proposed** on every item unless noted otherwise (R1 and R10 are done — see those sections). Where a section says "open question," that's a real fork the maintainer hasn't resolved yet — raise it in your PR/issue rather than guessing.
 
 ---
 
-## R1 — Autonomous self-healing loop (stop requiring `/learn` by hand)
+## R1 — Autonomous self-healing loop (stop requiring `/learn` by hand) — ✅ Done (forge 1.5.1)
 
 **Problem.** The harness's self-healing design (failure ledger → `/learn` → promoted lessons) only closes the loop if someone remembers to run `/learn`. Today nothing gets learned from a mistake until a human explicitly points it out and invokes the skill.
 
-**Proposed approach.** Add a scheduled or automatic trigger for `/learn` (and `/harness-audit`) instead of relying purely on manual invocation — e.g. auto-run at natural checkpoints (session start, if enough time/turns have passed since the last run) plus, where the platform allows it, a real interval-based background trigger.
+**What shipped.** The open question below resolved to "mostly inside the harness, plus an opt-in outside-the-harness layer for the unattended case" — both halves exist now:
 
-**Research so far.** Claude Code exposes a native cron-style scheduling primitive (`CronCreate`/`CronList`), but it is explicitly **session-scoped and non-durable**: jobs live only in memory for the current session, auto-expire after 7 days even if the session stays open, and vanish entirely the moment the session ends. It cannot by itself deliver "learns even when nobody's watching." A durable version likely needs either an OS-level scheduled task invoking headless `claude -p "/loop"`, or leaning on `SessionStart`/`SessionEnd` hooks to track elapsed time/turns since the last `/learn` run and auto-trigger it at the start of each new session (which happens naturally and often, unlike a background daemon).
+- **`hooks/capability-gate.sh`** (PreToolUse, `Write|Edit`) hard-blocks the first real source-code edit of a session until `.claude/state/last-loop-run.json` shows `/loop` ran within `LOOP_OVERDUE_HOURS` (default 24h; never gates `.claude/` paths, so `/loop`'s own maintenance writes can't deadlock against it). This replaced an earlier advisory-nudge design — deterministic hooks get ~100% compliance, prose nudges don't, and this was verified directly: a real headless Haiku session hit the deny, read `GUIDE.md`/`loop.md` on its own, ran the fix, and succeeded, with zero coaching.
+- **A real installed `/loop` skill** (`skills/loop/SKILL.md`) wrapping `loop.md` — added in 1.5.1 after a stress-test run showed the gate's original deny message pointed at a slash command that didn't exist yet in forged projects, and the target small model bypassed the gate via a Bash heredoc instead of running maintenance.
+- **`loop.md` Step 0** stamps the timestamp at the *start* of a loop iteration (not just the end), fixing a self-deadlock a whole-branch review caught: `/loop`'s own in-flight-work/idle-task steps can themselves be source edits, which the gate would otherwise block before `/loop` could ever satisfy it.
+- **Tier 2 — `scripts/setup-unattended-loop.sh`**, opt-in via `/forge`'s Phase 4.5 (explicit confirmation, never silent): installs a launchd (macOS) or cron (Linux) entry running `FORGE_UNATTENDED=1 claude -p "/loop"` on an interval. Under that env var, `/loop` skips `/ship`'s commit/push steps entirely and writes a timestamped review summary instead — verified with a real unattended run, which (working as intended) found and reported a real bug in the harness's own audit wiring.
 
-**Open question.** How much of this should live inside the harness itself (portable, stack-agnostic, works the moment `/forge` installs it) versus relying on an OS-level cron entry the user sets up once during install?
+**How it was verified.** Design → spec → 12-task implementation plan → subagent-driven build with per-task review → two rounds of whole-branch review (caught the Step 0 deadlock) → a real stress-test battery (4 headless sessions against forged scratch projects, plus a 1.4.0→1.5.x upgrade test) that found 2 more real gaps (the missing `/loop` skill, and R10's stale-index deadlock below) before those were fixed and re-verified live.
+
+**Known remaining limit.** The gate only matches the `Write`/`Edit` tool names — a model can still route around it via `Bash` (observed once, before the `/loop` skill existed, on a small model; not observed after the fix, but the primitive gap remains). Unattended-mode-on-a-small-model is untested (the real unattended run used a stronger default model).
 
 ---
 
@@ -96,13 +101,15 @@ None of these are started. **Status: proposed** on every item unless noted other
 
 ---
 
-## R10 — "Live" awareness of the model's full toolset (open research question)
+## R10 — "Live" awareness of the model's full toolset — ✅ Done for the skill-discovery slice (forge 1.5.1); broader question still open
 
-**Problem, in the maintainer's own framing:** the model isn't reliably aware of everything available to it — skills, MCP tools, harness mechanisms — so it under-uses its own capability. Flagged explicitly as unsolved, not a spec'd feature: *"I don't know how we'll do this, but we need to brainstorm it."*
+**Problem, in the maintainer's own framing:** the model isn't reliably aware of everything available to it — skills, MCP tools, harness mechanisms — so it under-uses its own capability. Originally flagged as unsolved, not a spec'd feature: *"I don't know how we'll do this, but we need to brainstorm it."*
 
-**Status.** Genuinely open. Likely connects to R4's `loop-engineering-main` research (its "Loop Ready" scoring and five-building-blocks framing may address exactly this) and to how session-start context/`CLAUDE.md` pointers degrade in effectiveness once context compaction pushes them out of the active window.
+**What actually shipped — narrower than the original framing, and that narrowing was deliberate.** Brainstorming this alongside R1 surfaced that R10 wasn't really a separate open question — R1's own trigger (an advisory "please run `/loop`" nudge) had the exact same weak-compliance failure mode R10 was worried about in general. So R10 got scoped down to the one slice that was both actionable and load-bearing for R1: *does the model know to search for a relevant installed skill before assuming one doesn't exist.* `capability-gate.sh`'s second condition requires a [SkillSeek](https://github.com/TheQmaks/skillseek) `skill_search` call once per session (only if SkillSeek's index is actually present — the harness never bundles or installs it) before source edits proceed, replacing a from-scratch design with an existing, purpose-built tool (its own README independently cites the same root problem: Claude Code's `skillListingBudgetFraction` caps skill listing at ~1% of context, hiding most of a large plugin set).
 
-**Proposed next step.** A dedicated brainstorming/research pass once R4 is done, rather than jumping straight to an implementation none of us have validated yet.
+**A real deadlock was found and fixed here too.** A stress test proved the original design's "fails open if SkillSeek isn't installed" claim was wrong in one case: if SkillSeek's index file exists but the plugin itself was later uninstalled, a session hard-deadlocked with no escape (reproduced: 20 turns, task failure). Fixed with a one-shot safety valve (`.skillseek-denied-once`) — the SkillSeek condition now blocks at most once per session; a working setup behaves identically to before, a broken one costs one retry instead of total failure. The `/loop`-overdue condition was deliberately *not* softened the same way (verified by a control test) — its remedy always exists in the project, so a hard gate there is safe.
+
+**Still open, not addressed by the above.** The original, broader ambition — awareness of *all* installed skills, MCP tools, and harness mechanisms, not just "search before assuming a skill doesn't exist" — remains unsolved, along with the context-compaction-degrades-pointers half of the original framing. R4's `loop-engineering-main` research (its "Loop Ready" scoring, five-building-blocks framing) is still unmined and may bear on this larger question; treat this section as re-opened at that broader scope if someone wants to pursue it.
 
 ---
 
