@@ -123,6 +123,32 @@ The requirements below are the maintainer's next-phase wish list for harness-for
 
 ---
 
+## R12 — Adopt Karpathy's "Think Before Coding" + "Surgical Changes" as new house rules; explicitly skip the rest (priority: 3rd)
+
+**Problem.** [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) packages four LLM-coding-discipline principles (derived from Andrej Karpathy's public observations, not authored by him) into a single `CLAUDE.md` file: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution.
+
+**Correction worth flagging.** Despite the repo's name, this is not Claude Code Skills in the SKILL.md/progressive-disclosure sense — it's one `CLAUDE.md` content file (optionally installed as a plugin purely for cross-project reuse; no skill-loading mechanics involved).
+
+**What's actually new here — checked against what's already enforced, not assumed.** Read the source file directly, then grepped this harness's own templates for each principle before claiming coverage:
+- **Simplicity First** — already Claude Code's own base-system-prompt behavior, near-verbatim ("don't add features/abstractions beyond what the task requires... three similar lines is better than a premature abstraction"). Adding it again here would just duplicate the model's own base instructions.
+- **Goal-Driven Execution** (verifiable success criteria, TDD, loop-until-verified) — already this harness's central thesis, and more rigorously enforced than the source repo's version: `rules/ship-verification.md` requires a stated verification command + observed result before any task can be marked `completed`, and `/milestone-task` already runs a red-green-refactor TDD loop.
+- **Surgical Changes** (touch only what you must, don't refactor adjacent code, clean up only your own mess) — checked `rules/git-workflow.md` directly: it covers branch naming, commit format, and push safety only — nothing about edit scope. **Genuinely not covered.**
+- **Think Before Coding** (state assumptions explicitly, present interpretations when genuinely ambiguous, push back, stop and name confusion rather than guess) — grepped `CLAUDE.md.tmpl` and `GUIDE.md` for "assumption"/"clarif"/"push back"/"confused": zero hits. **Genuinely not covered.**
+
+**Proposed approach.** Do not bulk-import the source `CLAUDE.md` — it would duplicate 2 of 4 principles for zero new value, burning context budget against this harness's own evidence-based context-economy stance (see R13). Add only the two genuinely uncovered principles — Think Before Coding, Surgical Changes — as new house-rule content, written in harness-forge's own voice rather than copy-pasted, either as new `CLAUDE.md.tmpl` bullets or a short new `rules/` file.
+
+---
+
+## R13 — A repeatable discipline for evaluating external CLAUDE.md/prompt-guideline repos before adopting them (priority: 4th)
+
+**Problem.** R12 above is a one-time action. More "prompt improvement" repos like it will keep surfacing, and the default temptation each time will be to bulk-install whatever looks good — which is exactly how this harness's own context budget got blown once already (`IMPROVEMENT-STUDY.md`'s Part A finding: ~5× over the evidence-based budget from accreted always-loaded prose). There's no documented process for vetting one of these before adding it.
+
+**Proposed approach.** Formalize the diff-against-existing-coverage analysis R12 itself demonstrates as a repeatable step — likely inside `/forge`'s Phase 1 house-rules drafting, or as a `/harness-audit` check: before adopting any external `CLAUDE.md`/rule-collection wholesale, diff its claims against (a) Claude Code's own base system prompt and (b) this harness's existing `rules/*.md`, and only add the genuinely non-redundant delta. Reject-by-default is the safe posture, given this harness's own founding evidence that instruction-following decays as rule count grows (IFScale, arXiv:2507.11538).
+
+**Open question.** Should this live as a documented step inside an existing skill (`/forge`'s house-rules phase seems the most natural home), or as its own lightweight new skill (e.g. `/evaluate-guidelines`)?
+
+---
+
 ## Contributing
 
 Pick a section above, comment on (or open) the corresponding issue to claim it, and scope your PR to that section alone — these are intentionally independent so review stays small and focused. If a section's "open question" isn't resolved yet, raise it before writing code; several of these have a real fork in approach that changes the implementation significantly.
