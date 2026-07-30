@@ -77,7 +77,25 @@ subs["FORGE_VERSION"] = version
 house_rules = "(none configured — run /forge to fill project conventions)"
 if house_rules_file and os.path.exists(house_rules_file):
     house_rules = open(house_rules_file, encoding="utf-8").read().strip()
-subs["HOUSE_RULES"] = house_rules
+
+# Coding discipline (ROADMAP R12) rides the HOUSE_RULES channel on purpose: it is the
+# only substitution injected into all six isolated agents (small-executor, bug-fixer,
+# code-reviewer, small-verifier, security-reviewer, silent-failure-hunter), each of which
+# introduces it with "House rules (restated, since you can't see .claude/rules/*.md)" —
+# and agents/ is harness-code zone, so an upgrade rewrites them with fresh substitutions.
+# A rules/*.md file would reach none of them (isolated context) and would cost
+# always-loaded context budget; CLAUDE.md is copy-only-if-absent so a pointer there never
+# reaches an existing project. Kept OUT of HOUSE_RULES_BULLETS deliberately: that one
+# feeds CLAUDE.md, which IS budget-charged by context-budget.sh.
+# Presence on every agent surface is CI-gated by evals/regressions/0005-*.sh — if you
+# edit the wording here, that check keeps the surfaces honest but not the phrasing.
+CODING_DISCIPLINE = """## Coding discipline (applies to every change you make)
+
+**Think before coding.** State non-obvious assumptions up front — don't silently pick one interpretation and run with it. When a request is genuinely ambiguous, name the readings, pick the sensible default, and flag it rather than guessing silently. Say so if a simpler approach exists than the one implied. When genuinely confused, stop and report what's unclear instead of guessing through it (in an unattended run, record the ambiguity in your report — never block waiting for an answer nobody is there to give).
+
+**Surgical changes.** Touch only what the task requires. Don't "improve" adjacent code, comments, or formatting while in a file for something else, and don't refactor what isn't broken as a side effect. Match existing style even where you'd choose differently. Clean up only what *your* edit made dead; mention pre-existing dead code you notice rather than removing it unasked — unless you are explicitly running a cleanup pass (`/declutter`), whose entire job is removing pre-existing dead code under its own evidence gate."""
+
+subs["HOUSE_RULES"] = CODING_DISCIPLINE + "\n\n" + house_rules
 subs["HOUSE_RULES_BULLETS"] = house_rules
 
 import re as _re
