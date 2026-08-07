@@ -123,7 +123,7 @@ The requirements below are the maintainer's next-phase wish list for harness-for
 
 ---
 
-## R12 — Adopt Karpathy's "Think Before Coding" + "Surgical Changes" as new house rules; explicitly skip the rest (priority: 3rd)
+## R12 — Adopt Karpathy's "Think Before Coding" + "Surgical Changes" as new house rules; explicitly skip the rest — ✅ Done
 
 **Problem.** [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) packages four LLM-coding-discipline principles (derived from Andrej Karpathy's public observations, not authored by him) into a single `CLAUDE.md` file: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution.
 
@@ -137,6 +137,10 @@ The requirements below are the maintainer's next-phase wish list for harness-for
 
 **Proposed approach.** Do not bulk-import the source `CLAUDE.md` — it would duplicate 2 of 4 principles for zero new value, burning context budget against this harness's own evidence-based context-economy stance (see R13). Add only the two genuinely uncovered principles — Think Before Coding, Surgical Changes — as new house-rule content, written in harness-forge's own voice rather than copy-pasted, either as new `CLAUDE.md.tmpl` bullets or a short new `rules/` file.
 
+**What shipped — one substitution, not a rules file.** The proposed approach above (a new `rules/` file) was designed, then rejected during independent verification, and the reasons are worth keeping: the six agents that actually write and review code in this harness run in isolated contexts and never see `rules/*.md`; `CLAUDE.md` is copy-only-if-absent, so a pointer added there never reaches an already-forged project (the rules file would land as an orphan `/harness-audit` then proposes retiring); and always-loaded budget measured with *real* house rules populated came to ~1448 of a 1500 hard cap, i.e. one modest edit from turning CI red in projects that changed nothing. Shipped instead: the content rides the `{{HOUSE_RULES}}` substitution in `bootstrap.sh` — the one channel injected into all six isolated agents *and* propagated on upgrade (`agents/` is harness-code zone) — kept out of `HOUSE_RULES_BULLETS` so `CLAUDE.md`'s budget is untouched (verified unchanged at 1202 tokens). `evals/regressions/0005-*.sh` CI-gates presence on every agent surface, red-green verified. `small-executor.md`'s Stop hook gained an *independent* second block condition for unstated assumptions on genuinely-ambiguous steps (an earlier draft made the two conditions conjunctive, which would have let an agent with zero verification evidence pass — caught in verification, guarded now by an explicit semantic assertion). `code-reviewer.md` routes scope-creep to Consider, since `review-diff.js`'s refuters default to rejecting findings they can't confirm from code alone.
+
+**Honest scope.** Presence on every surface is mechanically enforced; assumption-surfacing on `small-executor` is LLM-judged via its Stop hook (weaker than a deterministic gate, and not claimed otherwise); the rest is advisory. A deterministic "every changed file traces to the task" gate was deliberately *not* shipped — see R14.
+
 ---
 
 ## R13 — A repeatable discipline for evaluating external CLAUDE.md/prompt-guideline repos before adopting them (priority: 4th)
@@ -146,6 +150,16 @@ The requirements below are the maintainer's next-phase wish list for harness-for
 **Proposed approach.** Formalize the diff-against-existing-coverage analysis R12 itself demonstrates as a repeatable step — likely inside `/forge`'s Phase 1 house-rules drafting, or as a `/harness-audit` check: before adopting any external `CLAUDE.md`/rule-collection wholesale, diff its claims against (a) Claude Code's own base system prompt and (b) this harness's existing `rules/*.md`, and only add the genuinely non-redundant delta. Reject-by-default is the safe posture, given this harness's own founding evidence that instruction-following decays as rule count grows (IFScale, arXiv:2507.11538).
 
 **Open question.** Should this live as a documented step inside an existing skill (`/forge`'s house-rules phase seems the most natural home), or as its own lightweight new skill (e.g. `/evaluate-guidelines`)?
+
+---
+
+## R14 — Make "surgical changes" deterministically enforceable (needs a machine-parseable `Files:` contract first)
+
+**Problem.** R12 shipped "surgical changes" as advisory prose. The mechanically-enforceable version — a `PostToolUse` hook comparing the session's cumulative `git diff --name-only` against the file list declared by the active `TASKS.md` entry — was designed during R12 and deliberately not shipped, because the prerequisite doesn't exist yet: `tasks/TASKS.md`'s `Files:` field is freeform prose (the shipped template literally reads `Files: (expected files)`). Diffing against prose produces false positives, and a gate that cries wolf gets disabled — worse than no gate.
+
+**Proposed approach.** First define a machine-parseable contract for the `Files:` field (e.g. a comma- or space-separated glob list, validated by `self-check.sh` so drift is caught immediately). Then the hook is straightforward and follows `capability-gate.sh`'s established shape: deterministic detection, a block-path and an allow-path fixture, and a `state/` marker so it nudges once per session rather than on every edit. Note the honest ceiling: this can only ever enforce the *surgical changes* half of R12 — "state your assumptions when intent is genuinely ambiguous" is irreducibly a judgment call and no hook can decide it.
+
+**Open question.** Is a stricter `Files:` contract worth the friction it adds to every task entry? An alternative is scoping the gate to tasks that opt in by declaring a parseable list, leaving prose entries ungated.
 
 ---
 
