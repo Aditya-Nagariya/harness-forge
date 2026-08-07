@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Regression check: the coding-discipline house rules (ROADMAP R12) must reach EVERY
 # isolated agent. These agents cannot see .claude/rules/*.md — they only get the
-# {{HOUSE_RULES}} substitution — so if a future edit moves this content into a rules
-# file, renames the marker, or drops {{HOUSE_RULES}} from an agent, that agent silently
+# HOUSE_RULES template variable substitution — so if a future edit moves this content
+# into a rules file, renames the marker, or drops the HOUSE_RULES substitution from an
+# agent, that agent silently
 # loses the rules with no other symptom. This check is the mechanical replacement for
 # "remember to keep six copies in sync."
 set -uo pipefail
