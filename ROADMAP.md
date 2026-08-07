@@ -163,6 +163,16 @@ The requirements below are the maintainer's next-phase wish list for harness-for
 
 ---
 
+## R15 — Guard against unintended `{{KEY}}` substitution in template prose (found twice during R12)
+
+**Problem.** `bootstrap.sh`'s `substitute()` applies its single-pass `{{KEY}}` regex to every file under `templates/dotclaude/`, unconditionally — not just `*.tmpl` files, despite the script's own header comment claiming otherwise (a stale claim, itself worth fixing). Writing a literal `{{SOMETHING}}` token as documentation prose — describing the substitution mechanism by name, not intending an actual substitution — gets silently replaced with that key's real value on install. R12 hit this twice: a new regression check's own comment mentioned `{{HOUSE_RULES}}` by name and got corrupted into a syntax error on install (caught only because it happened to break bash syntax — a lucky catch, not a designed one); a `memory/decisions.md` entry describing the same mechanism would have spliced the entire multi-paragraph house-rules text into a decision log entry had the deviation not been caught in review. `validate.sh`'s placeholder check only looks for *leftover*, unsubstituted placeholders — nothing checks for *unintended*, over-substituted ones, so a corrupted-but-syntactically-valid file (like the decisions.md near-miss) would sail through `VALIDATE: all checks passed` undetected.
+
+**Proposed approach.** Two independent, complementary fixes: (1) an escape convention for writing a literal template-variable name in prose without triggering substitution — e.g. a sentinel like `{{ HOUSE_RULES }}` (spaced, deliberately non-matching) or a documented escape, whichever `substitute()`'s regex can be cheaply taught to skip; (2) a `validate.sh` assertion that scans installed `memory/`, `evals/`, and other non-`.tmpl` files for any `{{[A-Za-z_]+}}`-shaped substring that isn't one of the small set of legitimate substitution sites, failing loud instead of relying on luck to surface the corruption. Also worth fixing while in this code: `bootstrap.sh`'s own header comment claims substitution is limited to `*.tmpl` files, which is stale and inaccurate.
+
+**Open question.** Should the fix be "make substitution opt-in per file" (safer, but a bigger change to the install pipeline) or "keep it unconditional but detect-and-fail on unintended matches" (smaller, but only catches the problem after the fact rather than preventing it)? The second matches this repo's existing deterministic-gate-plus-fixture pattern more cheaply; the first is more robust long-term.
+
+---
+
 ## Contributing
 
 Pick a section above, comment on (or open) the corresponding issue to claim it, and scope your PR to that section alone — these are intentionally independent so review stays small and focused. If a section's "open question" isn't resolved yet, raise it before writing code; several of these have a real fork in approach that changes the implementation significantly.
